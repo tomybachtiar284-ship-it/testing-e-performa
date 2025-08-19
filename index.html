@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PERFORMA</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="images/performalogo.png" onerror="this.src='https://placehold.co/180x60/0d2847/ffffff?text=PERFORMA';" alt="Logo PERFORMA" class="logo-img" />
+                <h1>PERFORMA</h1>
+                <p>Plant & Employee Resource Management</p>
+            </div>
+            <nav class="menu">
+                <ul>
+                    <li><a href="#" class="active" data-page="DASHBOARD"><i class="fas fa-home"></i> DASHBOARD</a></li>
+                    <li><a href="#" data-page="POWER PLANT PERFORMANCE"><i class="fas fa-industry"></i> POWER PLANT PERFORMANCE</a></li>
+                    <li><a href="#" data-page="HUMAN RESOURCE PERFORMANCE"><i class="fas fa-users"></i> HUMAN RESOURCE PERFORMANCE</a></li>
+                    <li><a href="#" data-page="EQUIPMENT DATA"><i class="fas fa-cogs"></i> EQUIPMENT DATA</a></li>
+                    <li><a href="#" data-page="RENEWABLE ENERGY"><i class="fas fa-solar-panel"></i> RENEWABLE ENERGY</a></li>
+                    <li><a href="#" data-page="CSR"><i class="fas fa-hand-holding-heart"></i> CSR</a></li>
+                    <li><a href="#" data-page="SOP & WORK INSTRUCTIONS"><i class="fas fa-book"></i> SOP & WORK INSTRUCTIONS</a></li>
+                </ul>
+                 <button id="logout-btn" class="btn-delete" style="width: 85%; margin: 25px auto 0; display: block;">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <div class="content-header">
+                <h2 id="page-title">Dashboard</h2>
+                <div class="header-actions">
+                    <button id="refresh-btn" class="btn-secondary" title="Refresh Data">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="content-body" id="content-body">
+            </div>
+        </main>
+    </div>
+    <!-- Modal Form Karyawan -->
+    <div id="employeeFormModal" class="modal">
+        <div class="modal-content form-modal">
+            <span class="close-button">&times;</span>
+            <h3 id="form-title">Tambah Karyawan</h3>
+            <form id="employee-form">
+                <input type="hidden" id="employee-index">
+                <div class="form-group">
+                    <label for="form-nid">NID</label>
+                    <input type="text" id="form-nid" required>
+                </div>
+                <div class="form-group">
+                    <label for="form-name">Nama</label>
+                    <input type="text" id="form-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="form-position">Jobtitle</label>
+                    <input type="text" id="form-position" required>
+                </div>
+                <div class="form-group">
+                    <label for="form-company">Company</label>
+                    <select id="form-company" required>
+                        <option value="">Pilih Company</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="form-regu">Regu / Kelompok Kerja</label>
+                    <select id="form-regu" required>
+                        <option value="Daytime">Daytime</option>
+                        <option value="A">Regu A</option>
+                        <option value="B">Regu B</option>
+                        <option value="C">Regu C</option>
+                        <option value="D">Regu D</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="form-photo">Foto</label>
+                    <input type="file" id="form-photo" accept="image/*">
+                    <img id="form-photo-preview" src="https://placehold.co/100x120/cccccc/333?text=Preview" alt="Preview Foto">
+                </div>
+                <button type="submit" id="save-button">Simpan</button>
+            </form>
+        </div>
+    </div>
+    <!-- Modal Dashboard Monitoring -->
+    <div id="monitoringModal" class="modal modal-xl">
+        <div class="modal-content">
+            <div class="monitoring-header">
+                <h3>DASHBOARD ONLINE INFORMASI KARYAWAN LINGKUP PT PLN NUSANTARA POWER SERVICES UNIT PLTU AMPANA</h3>
+                <button id="toggle-fullscreen-btn" class="header-btn" title="Perbesar Tampilan">
+                    <i class="fas fa-expand"></i>
+                </button>
+                <div id="real-time-clock"></div>
+                <span class="close-button">&times;</span>
+            </div>
+            <div class="monitoring-body">
+                <div class="monitoring-details">
+                    <div class="details-company-logo">
+                        <img id="details-company-logo-img" src="https://placehold.co/100x100/ffffff/333?text=Logo" alt="Logo Perusahaan">
+                    </div>
+                    <div class="details-header">
+                        <span>NAME ID</span>
+                        <p id="details-name">-</p>
+                    </div>
+                    <div class="details-photo-frame">
+                        <img id="details-photo" src="https://placehold.co/300x400/cccccc/333?text=SCAN" alt="Foto Karyawan">
+                    </div>
+                </div>
+                <div class="monitoring-info-stats">
+                    <div class="info-grid">
+                        <div class="info-item"><span>NID</span><p id="details-nid">-</p></div>
+                        <div class="info-item"><span>JOBTITLE</span><p id="details-position">-</p></div>
+                        <div class="info-item"><span>STATUS</span><p id="details-status">-</p></div>
+                        <div class="info-item"><span>UNIT</span><p id="details-unit">PLTU AMPANA</p></div>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-box"><span>MANPOWER PT PLN NPS</span><p id="stat-pln-nps">0</p></div>
+                        <div class="stat-box"><span>MANPOWER PT MKP</span><p id="stat-mkp">0</p></div>
+                        <div class="stat-box"><span>MANPOWER MKP IC</span><p id="stat-mkp-ic">0</p></div>
+                        <div class="stat-box"><span>MANPOWER SECURITY</span><p id="stat-security">0</p></div>
+                        <div class="stat-box"><span>VISITOR / P3</span><p id="stat-visitor">0</p></div>
+                    </div>
+                </div>
+                <div class="monitoring-log-container">
+                    <div class="scan-input-area">
+                        <input type="text" id="nid-scanner-input" placeholder="Scan Barcode atau Masukkan NID...">
+                        <button id="scan-button" class="btn-primary">PROSES</button>
+                    </div>
+                    <div class="log-table-wrapper">
+                        <table class="monitoring-table">
+                            <thead>
+                                <tr>
+                                    <th>Real Time</th>
+                                    <th>Nama</th>
+                                    <th>NID</th>
+                                    <th>Jobtitle</th>
+                                    <th>Company</th>
+                                    <th>Status</th>
+                                    <th>Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monitoring-log-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="monitoring-footer">
+                <div class="k3-header">DATA STATISTIK K3</div>
+                <div class="k3-stats">
+                    <div class="k3-box yellow"><button class="k3-edit-btn" data-target="k3-jam-hilang" title="Edit Nilai"><i class="fas fa-edit"></i></button><span>JAM KERJA HILANG</span><p id="k3-jam-hilang">0</p></div>
+                    <div class="k3-box red"><button class="k3-edit-btn" data-target="k3-kecelakaan" title="Edit Nilai"><i class="fas fa-edit"></i></button><span>KECELAKAAN BERAT & RINGAN</span><p id="k3-kecelakaan">NIHIL</p></div>
+                    <div class="k3-box blue"><button class="k3-edit-btn" data-target="k3-jam-lalu" title="Edit Nilai"><i class="fas fa-edit"></i></button><span>JAM KERJA BULAN LALU</span><p id="k3-jam-lalu">43427</p></div>
+                    <div class="k3-box orange"><button class="k3-edit-btn" data-target="k3-jam-total" title="Edit Nilai"><i class="fas fa-edit"></i></button><span>TOTAL JAM KERJA</span><p id="k3-jam-total">1694837</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal Rekapitulasi -->
+    <div id="recapModal" class="modal modal-xl">
+        <div class="modal-content">
+            <div class="monitoring-header">
+                <h3>Rekapitulasi Aktivitas Karyawan</h3>
+                <div class="header-actions">
+                    <button id="download-recap-btn" class="btn-primary"><i class="fas fa-download"></i> Download Excel</button>
+                    <button id="clear-recap-btn" class="btn-delete"><i class="fas fa-trash"></i> Hapus Data</button>
+                </div>
+                <span class="close-button">&times;</span>
+            </div>
+            <div class="log-table-wrapper" id="recap-table-container">
+                <table class="monitoring-table">
+                    <thead>
+                        <tr>
+                            <th>Waktu</th>
+                            <th>Nama</th>
+                            <th>NID</th>
+                            <th>Jobtitle</th>
+                            <th>Company</th>
+                            <th>Status</th>
+                            <th>Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recap-log-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- Modal Jadwal Shift -->
+    <div id="shiftScheduleModal" class="modal modal-xl">
+        <div class="modal-content">
+            <div class="monitoring-header">
+                <h3 id="schedule-title">Pengaturan Jadwal Shift</h3>
+                <div class="schedule-controls">
+                    <select id="month-select"></select>
+                    <select id="year-select"></select>
+                    <button id="open-shift-times-btn" class="btn-secondary"><i class="fas fa-clock"></i> Atur Jam Kerja</button>
+                </div>
+                <div class="header-actions">
+                    <button id="save-schedule-btn" class="btn-success"><i class="fas fa-save"></i> Simpan Jadwal</button>
+                </div>
+                <span class="close-button">&times;</span>
+            </div>
+            <div class="schedule-table-container">
+                <table id="schedule-table" class="schedule-table"></table>
+            </div>
+        </div>
+    </div>
+   
+    <!-- Modal Pengaturan Jam Shift -->
+    <div id="shiftTimesModal" class="modal">
+        <div class="modal-content form-modal" style="max-width: 600px;">
+            <span class="close-button">&times;</span>
+            <h3>Atur Jam Kerja Shift</h3>
+            <form id="shift-times-form">
+                <div class="shift-time-grid">
+                    <div class="grid-header">Shift</div>
+                    <div class="grid-header">Jam Masuk</div>
+                    <div class="grid-header">Jam Pulang</div>
+                    <div>Shift Pagi</div>
+                    <div class="time-input">
+                        <input type="number" id="pagi-start-hour" min="0" max="23" required> : <input type="number" id="pagi-start-minute" min="0" max="59" required>
+                    </div>
+                    <div class="time-input">
+                        <input type="number" id="pagi-end-hour" min="0" max="23" required> : <input type="number" id="pagi-end-minute" min="0" max="59" required>
+                    </div>
+                    <div>Shift Sore</div>
+                    <div class="time-input">
+                        <input type="number" id="sore-start-hour" min="0" max="23" required> : <input type="number" id="sore-start-minute" min="0" max="59" required>
+                    </div>
+                    <div class="time-input">
+                        <input type="number" id="sore-end-hour" min="0" max="23" required> : <input type="number" id="sore-end-minute" min="0" max="59" required>
+                    </div>
+                    <div>Shift Malam</div>
+                    <div class="time-input">
+                        <input type="number" id="malam-start-hour" min="0" max="23" required> : <input type="number" id="malam-start-minute" min="0" max="59" required>
+                    </div>
+                    <div class="time-input">
+                        <input type="number" id="malam-end-hour" min="0" max="23" required> : <input type="number" id="malam-end-minute" min="0" max="59" required>
+                    </div>
+                    <div>Daytime</div>
+                    <div class="time-input">
+                        <input type="number" id="daytime-start-hour" min="0" max="23" required> : <input type="number" id="daytime-start-minute" min="0" max="59" required>
+                    </div>
+                    <div class="time-input">
+                        <input type="number" id="daytime-end-hour" min="0" max="23" required> : <input type="number" id="daytime-end-minute" min="0" max="59" required>
+                    </div>
+                </div>
+                <button type="submit" id="save-shift-times-btn">Simpan Jam Kerja</button>
+            </form>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+
+<!-- ===== KODE PENJAGA (LOGIN CHECK) ===== -->
+<!-- Cek hanya jika kita berada di file index.html -->
+<script>
+if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/')) {
+    if (sessionStorage.getItem('statusLogin') !== 'true') {
+        // Jika belum login, paksa kembali ke halaman login
+        window.location.href = 'login.html';
+    }
+}
+</script>
