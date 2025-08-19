@@ -18,7 +18,7 @@ body {
 }
 
 .login-form {
-    background: white;
+    background: rgb(7, 173, 202);
     padding: 40px;
     border-radius: 10px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -169,4 +169,5 @@ button:disabled .loading-spinner {
 /* Warna ikon untuk kartu baru (Persentase Kehadiran) */
 .kpi-card .icon.attendance-percent {
     background-color: #8B5CF6; /* Ungu */
+
 }
