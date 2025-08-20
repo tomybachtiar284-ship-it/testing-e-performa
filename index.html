@@ -31,14 +31,20 @@
             </nav>
         </aside>
         <main class="main-content">
-            <div class="content-header">
-                <h2 id="page-title">Dashboard</h2>
-                <div class="header-actions">
-                    <button id="refresh-btn" class="btn-secondary" title="Refresh Data">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                </div>
-            </div>
+<div class="content-header">
+    <div class="header-left">
+        <div class="nav-buttons">
+            <button id="nav-back-btn" class="btn-nav" title="Kembali"><i class="fas fa-arrow-left"></i></button>
+            <button id="nav-forward-btn" class="btn-nav" title="Maju"><i class="fas fa-arrow-right"></i></button>
+        </div>
+        <h2 id="page-title">Dashboard</h2>
+    </div>
+    <div class="header-actions">
+        <button id="refresh-btn" class="btn-secondary" title="Refresh Data">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+</div>
             <div class="content-body" id="content-body">
             </div>
         </main>
@@ -255,6 +261,7 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <script src="script.js"></script>
 </body>
