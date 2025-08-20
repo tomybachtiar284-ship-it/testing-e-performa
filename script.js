@@ -2,6 +2,8 @@
 //           KODE FINAL SCRIPT.JS (LENGKAP)
 // ===============================================
 document.addEventListener('DOMContentLoaded', function () {
+    Chart.register(ChartDataLabels);
+
     // --- ELEMEN DOM ---
     const menuLinks = document.querySelectorAll('.sidebar .menu ul li a');
     const pageTitle = document.getElementById('page-title');
@@ -37,7 +39,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const refreshBtn = document.getElementById('refresh-btn');
     const shiftScheduleModal = document.getElementById('shiftScheduleModal');
     const shiftTimesModal = document.getElementById('shiftTimesModal');
-    
+    const navBackBtn = document.getElementById('nav-back-btn');
+    const navForwardBtn = document.getElementById('nav-forward-btn');
+
+
     // --- STATE APLIKASI ---
     let employees = [];
     let companies = [];
@@ -47,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let shiftRules = {};
     let clockInterval = null;
     let isFullscreen = false;
+    let currentPageName = '';
     const lateSound = new Audio('sounds/terlambat.mp3');
     const scanSound = new Audio('sounds/masuk.mp3');
     const companyLogos = { "PT PLN NPS": "images/imagespln_nps.png", "PT MKP": "images/imagesmkp.png", "MKP IC": "images/imagesmkp_ic.png", "SECURITY": "images/scrt.png", "Visitor": "images/visitor.png" };
@@ -103,14 +109,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         saveCompanies();
     }
-    
+
     // --- FUNGSI MODAL ---
     function openModal(modalElement) { if (modalElement) { modalElement.style.display = 'block'; document.body.classList.add('modal-open'); } }
     function closeModal(modalElement = null) { if (modalElement) { modalElement.style.display = 'none'; } else { document.querySelectorAll('.modal').forEach(modal => { modal.style.display = 'none'; }); } document.body.classList.remove('modal-open'); if (clockInterval) { clearInterval(clockInterval); clockInterval = null; } }
-    
+
     // --- FUNGSI-FUNGSI APLIKASI ---
     function renderCompanyOptions() { const companySelect = document.getElementById('form-company'); if(companySelect) { companySelect.innerHTML = '<option value="">Pilih Company</option>' + companies.map(company => `<option value="${company}">${company}</option>`).join(''); } }
-    
+
     function renderEmployeeManagementPage() {
         contentBody.innerHTML = `
             <div class="action-bar">
@@ -121,50 +127,81 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
             <div id="employee-table-wrapper" style="display: none;"></div>
         `;
-        document.getElementById('btn-show-list').addEventListener('click', () => {
-             const tableWrapper = document.getElementById('employee-table-wrapper');
-            if (tableWrapper.style.display === 'none' || tableWrapper.innerHTML === '') {
-                tableWrapper.style.display = 'block';
-                const groupedEmployees = employees.reduce((acc, emp) => { (acc[emp.regu || 'Daytime'] = acc[emp.regu || 'Daytime'] || []).push(emp); return acc; }, {});
-                
-                let contentHTML = `
-                    <div class="action-bar" style="justify-content: flex-start;">
-                        <button class="btn-primary" data-action="add-employee"><i class="fas fa-plus"></i> Tambah Karyawan</button>
-                        <button class="btn-primary" data-action="manage-companies"><i class="fas fa-cog"></i> Kelola PT</button>
-                        <input type="file" id="excel-importer" style="display:none" accept=".xlsx, .xls">
-                        <button class="btn-primary" onclick="document.getElementById('excel-importer').click()"><i class="fas fa-file-import"></i> Impor dari Excel</button>
-                        <button class="btn-success" data-action="download-template"><i class="fas fa-file-download"></i> Download Template</button>
-                        <button class="btn-delete" data-action="delete-all" style="margin-left: auto;"><i class="fas fa-trash-alt"></i> Hapus Semua</button>
-                    </div>`;
-                
-                if (employees.length > 0) {
-                    ['Daytime', 'A', 'B', 'C', 'D'].forEach(regu => {
-                        if (groupedEmployees[regu]) {
-                            contentHTML += `
-                                <div class="regu-group">
-                                    <h3 class="regu-header">Kelompok: ${regu}</h3>
-                                    <div class="employee-table-container">
-                                        <table class="employee-table">
-                                            <thead><tr><th>NID</th><th>Nama</th><th>Jobtitle</th><th>Company</th><th>Aksi</th></tr></thead>
-                                            <tbody>
-                                                ${groupedEmployees[regu].map(emp => `<tr><td>${emp.nid}</td><td>${emp.name}</td><td>${emp.position}</td><td>${emp.company}</td><td class="actions"><button class="btn-edit" data-action="edit-employee" data-nid="${emp.nid}"><i class="fas fa-edit"></i> Edit</button><button class="btn-delete" data-action="delete-employee" data-nid="${emp.nid}"><i class="fas fa-trash"></i> Hapus</button><button class="btn-barcode" data-action="download-barcode" data-nid="${emp.nid}" data-name="${emp.name}"><i class="fas fa-qrcode"></i> Barcode</button></td></tr>`).join('')}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>`;
-                        }
-                    });
+    
+        const btnShowList = document.getElementById('btn-show-list');
+        if (btnShowList) {
+            btnShowList.addEventListener('click', () => {
+                const tableWrapper = document.getElementById('employee-table-wrapper');
+                if (!tableWrapper) return;
+    
+                if (tableWrapper.style.display === 'none' || tableWrapper.innerHTML === '') {
+                    tableWrapper.style.display = 'block';
+                    const groupedEmployees = employees.reduce((acc, emp) => {
+                        (acc[emp.regu || 'Daytime'] = acc[emp.regu || 'Daytime'] || []).push(emp);
+                        return acc;
+                    }, {});
+    
+                    let contentHTML = `
+                        <div class="action-bar" style="justify-content: flex-start;">
+                            <button class="btn-primary" data-action="add-employee"><i class="fas fa-plus"></i> Tambah Karyawan</button>
+                            <button class="btn-primary" data-action="manage-companies"><i class="fas fa-cog"></i> Kelola PT</button>
+                            <input type="file" id="excel-importer" style="display:none" accept=".xlsx, .xls">
+                            <button class="btn-primary" onclick="document.getElementById('excel-importer').click()"><i class="fas fa-file-import"></i> Impor dari Excel</button>
+                            <button class="btn-success" data-action="download-template"><i class="fas fa-file-download"></i> Download Template</button>
+                            <button class="btn-delete" data-action="delete-all" style="margin-left: auto;"><i class="fas fa-trash-alt"></i> Hapus Semua</button>
+                        </div>`;
+    
+                    if (employees.length > 0) {
+                        ['Daytime', 'A', 'B', 'C', 'D'].forEach(regu => {
+                            if (groupedEmployees[regu] && groupedEmployees[regu].length > 0) {
+                                contentHTML += `
+                                    <div class="regu-group">
+                                        <h3 class="regu-header">Kelompok: ${regu}</h3>
+                                        <div class="employee-table-container">
+                                            <table class="employee-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>NID</th>
+                                                        <th>Nama</th>
+                                                        <th>Jobtitle</th>
+                                                        <th>Company</th>
+                                                        <th>Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${groupedEmployees[regu].map(emp => `
+                                                        <tr>
+                                                            <td>${emp.nid}</td>
+                                                            <td>${emp.name}</td>
+                                                            <td>${emp.position}</td>
+                                                            <td>${emp.company}</td>
+                                                            <td class="actions">
+                                                                <button class="btn-edit" data-action="edit-employee" data-nid="${emp.nid}"><i class="fas fa-edit"></i> Edit</button>
+                                                                <button class="btn-delete" data-action="delete-employee" data-nid="${emp.nid}"><i class="fas fa-trash"></i> Hapus</button>
+                                                                <button class="btn-barcode" data-action="download-barcode" data-nid="${emp.nid}" data-name="${emp.name}"><i class="fas fa-qrcode"></i> Barcode</button>
+                                                            </td>
+                                                        </tr>
+                                                    `).join('')}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>`;
+                            }
+                        });
+                    } else {
+                        contentHTML += `<p style="text-align: center; margin-top: 20px; color: #64748b;">Belum ada data karyawan.</p>`;
+                    }
+    
+                    tableWrapper.innerHTML = contentHTML;
+                    const excelImporter = document.getElementById('excel-importer');
+                    if (excelImporter) {
+                        excelImporter.addEventListener('change', handleExcelImport);
+                    }
                 } else {
-                     contentHTML += `<p style="text-align: center; margin-top: 20px; color: #64748b;">Belum ada data karyawan.</p>`;
+                    tableWrapper.style.display = 'none';
                 }
-
-                tableWrapper.innerHTML = contentHTML;
-                const excelImporter = document.getElementById('excel-importer');
-                if(excelImporter) excelImporter.addEventListener('change', handleExcelImport);
-            } else {
-                tableWrapper.style.display = 'none';
-            }
-        });
+            });
+        }
     }
 
     function renderMonitoringLog() { if (monitoringLogBody) { monitoringLogBody.innerHTML = monitoringLog.slice(0).reverse().map(log => `<tr><td>${new Date(log.timestamp).toLocaleTimeString('id-ID', { hour12: false })}</td><td>${log.name}</td><td>${log.nid}</td><td>${log.position}</td><td>${log.company}</td><td data-status="${log.status.toLowerCase()}">${log.status}</td><td class="log-keterangan">${log.keterangan || '-'}</td></tr>`).join(''); } }
@@ -196,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (index !== '') { employees[index] = employeeData; } else { employees.push(employeeData); }
         saveEmployees();
         closeModal(employeeFormModal);
-        
+
         const tableWrapper = document.getElementById('employee-table-wrapper');
         if (tableWrapper && tableWrapper.style.display !== 'none') {
             tableWrapper.innerHTML = '';
@@ -302,20 +339,82 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         openModal(shiftTimesModal);
     }
-    
+
+    // --- FUNGSI BARU UNTUK MENAMPILKAN REGU AKTIF ---
+    function updateActiveShiftDisplay() {
+        const displayElement = document.getElementById('active-shift-display');
+        if (!displayElement) return;
+
+        const now = new Date();
+        const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const scheduleForToday = monthlySchedule[todayKey];
+        
+        let activeRegu = null;
+
+        if (scheduleForToday) {
+            for (const regu of ['A', 'B', 'C', 'D']) {
+                const shiftName = scheduleForToday[regu];
+                if (shiftName && shiftName !== 'Libur') {
+                    const rule = shiftRules[shiftName];
+                    const startTime = new Date();
+                    startTime.setHours(rule.start.hour, rule.start.minute, 0, 0);
+
+                    const endTime = new Date();
+                    endTime.setHours(rule.end.hour, rule.end.minute, 0, 0);
+                    
+                    if (endTime < startTime) { // Shift malam (melewati tengah malam)
+                        const yesterday = new Date(now);
+                        yesterday.setDate(now.getDate() - 1);
+                        const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+                        const scheduleForYesterday = monthlySchedule[yesterdayKey];
+
+                        if(now < endTime){ // Jika sekarang masih pagi hari (sebelum jam pulang shift malam)
+                           if(scheduleForYesterday && scheduleForYesterday[regu] === shiftName){
+                                activeRegu = regu;
+                                break;
+                           }
+                        } else if (now >= startTime) { // Jika sekarang sudah masuk jam kerja shift malam
+                           activeRegu = regu;
+                           break;
+                        }
+                    } else { // Shift normal (Pagi atau Sore)
+                        if (now >= startTime && now < endTime) {
+                           activeRegu = regu;
+                           break;
+                        }
+                    }
+                }
+            }
+        }
+
+        const numberElement = displayElement.querySelector('.number');
+        if (numberElement) {
+            if (activeRegu) {
+                numberElement.textContent = `REGU ${activeRegu}`;
+            } else {
+                numberElement.textContent = 'ISTIRAHAT';
+            }
+        }
+    }
+
     // --- NAVIGASI UTAMA ---
-    function navigateTo(pageName) {
+    function navigateTo(pageName, addToHistory = true) {
+        currentPageName = pageName;
+        const oldBtn = document.getElementById('show-options-btn');
+        if (oldBtn) oldBtn.remove();
+        
         pageTitle.textContent = pageName;
         menuLinks.forEach(l => l.classList.remove('active'));
         const activeLink = document.querySelector(`.sidebar .menu a[data-page="${pageName}"]`);
         if (activeLink) activeLink.classList.add('active');
 
         if (pageName === 'DASHBOARD') {
+            const headerActions = document.querySelector('.content-header .header-actions');
+            headerActions.insertAdjacentHTML('beforeend', `
+                <button id="show-options-btn" class="btn-primary">PILIH OPSI DASHBOARD</button>
+            `);
+
             contentBody.innerHTML = `
-                <div class="dashboard-header">
-                    <h2>Selamat Datang di Dashboard PERFORMA</h2>
-                    <button id="show-options-btn" class="btn-primary">Pilih Opsi Dashboard</button>
-                </div>
                 <div id="summary-container" class="summary-container">
                     <p class="summary-placeholder">Pilih opsi di atas untuk melihat summary.</p>
                 </div>
@@ -328,7 +427,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>
                     </div>
                 </div>`;
-            
+
             function openOptionsModal() { openModal(document.getElementById('optionsModal')); }
             function closeModalFunc() { closeModal(document.getElementById('optionsModal')); }
 
@@ -350,46 +449,61 @@ document.addEventListener('DOMContentLoaded', function () {
                             <button id="hr-fullscreen-btn" title="Toggle Fullscreen"><i class="fas fa-expand"></i></button>
                             <div class="marquee-container"><p>SELAMAT DATANG DI PT PLN NUSANTARA POWER SERVICE UNIT PLTU AMPANA, UTAMAKAN KESELAMATAN DAN KESEHATAN KERJA (K3) DALAM SETIAP AKTIVITAS ANDA.</p></div>
                             <div class="hr-dashboard-grid">
-    <div class="kpi-card">
-        <div class="icon total-emp"><i class="fas fa-users"></i></div>
-        <div class="info">
-            <div class="number">${totalEmployees}</div>
-            <div class="label">Total Karyawan Terdaftar</div>
-        </div>
-    </div>
-    <div class="kpi-card">
-        <div class="icon active-today"><i class="fas fa-user-check"></i></div>
-        <div class="info">
-            <div class="number">${activeToday}</div>
-            <div class="label">Jumlah Hadir Hari Ini</div>
-        </div>
-    </div>
-    <div class="kpi-card">
-        <div class="icon attendance-percent"><i class="fas fa-chart-pie"></i></div>
-        <div class="info">
-            <div class="number">${attendancePercentage}%</div>
-            <div class="label">Persentase Kehadiran</div>
-        </div>
-    </div>
-    <div class="kpi-card">
-        <div class="icon safety-score"><i class="fas fa-shield-alt"></i></div>
-        <div class="info">
-            <div class="number">98.5%</div>
-            <div class="label">Skor Keselamatan</div>
-        </div>
-    </div>
-</div>
+                                <div class="kpi-card">
+                                    <div class="icon total-emp"><i class="fas fa-users"></i></div>
+                                    <div class="info">
+                                        <div class="number">${totalEmployees}</div>
+                                        <div class="label">Total Karyawan Terdaftar</div>
+                                    </div>
+                                </div>
+                                <div class="kpi-card" id="active-shift-display">
+                                    <div class="icon active-shift"><i class="fas fa-clock"></i></div>
+                                    <div class="info">
+                                        <div class="number">ISTIRAHAT</div>
+                                        <div class="label">Regu Bertugas Saat Ini</div>
+                                    </div>
+                                </div>
+                                <div class="kpi-card">
+                                    <div class="icon active-today"><i class="fas fa-user-check"></i></div>
+                                    <div class="info">
+                                        <div class="number">${activeToday}</div>
+                                        <div class="label">Jumlah Hadir Hari Ini</div>
+                                    </div>
+                                </div>
+                                <div class="kpi-card">
+                                    <div class="icon attendance-percent"><i class="fas fa-chart-pie"></i></div>
+                                    <div class="info">
+                                        <div class="number">${attendancePercentage}%</div>
+                                        <div class="label">Persentase Kehadiran</div>
+                                    </div>
+                                </div>
+                                <div class="kpi-card">
+                                    <div class="icon safety-score"><i class="fas fa-shield-alt"></i></div>
+                                    <div class="info">
+                                        <div class="number">98.5%</div>
+                                        <div class="label">Skor Keselamatan</div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="hr-main-content-grid">
                                 <div class="activity-feed">
                                     <h3><i class="fas fa-history"></i> Aktivitas Terkini</h3>
                                     <ul>${recentActivitiesHTML}</ul>
-                                    <div class="k3-stats-dashboard">
-                                        <h3><i class="fas fa-hard-hat"></i> Data Statistik K3</h3>
-                                        <div class="k3-grid">
-                                            <div class="k3-card yellow"><span>Jam Kerja Hilang</span><p id="d-k3-jam-hilang">0</p></div>
-                                            <div class="k3-card red"><span>Kecelakaan Berat & Ringan</span><p id="d-k3-kecelakaan">NIHIL</p></div>
-                                            <div class="k3-card blue"><span>Jam Kerja Bulan Lalu</span><p id="d-k3-jam-lalu">0</p></div>
-                                            <div class="k3-card orange"><span>Total Jam Kerja</span><p id="d-k3-jam-total">0</p></div>
+                                    <div class="bottom-widgets">
+                                        <div class="k3-stats-dashboard">
+                                            <h3><i class="fas fa-hard-hat"></i> Data Statistik K3</h3>
+                                            <div class="k3-grid">
+                                                <div class="k3-card yellow"><span>Jam Kerja Hilang</span><p id="d-k3-jam-hilang">0</p></div>
+                                                <div class="k3-card red"><span>Kecelakaan Berat & Ringan</span><p id="d-k3-kecelakaan">NIHIL</p></div>
+                                                <div class="k3-card blue"><span>Jam Kerja Bulan Lalu</span><p id="d-k3-jam-lalu">0</p></div>
+                                                <div class="k3-card orange"><span>Total Jam Kerja</span><p id="d-k3-jam-total">0</p></div>
+                                            </div>
+                                        </div>
+                                        <div class="chart-wrapper">
+                                            <h3><i class="fas fa-chart-pie"></i> Komposisi Karyawan</h3>
+                                            <div class="chart-container">
+                                                <canvas id="employeeCompositionChart"></canvas>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -406,6 +520,62 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 container.innerHTML = content;
                 closeModalFunc();
+
+                const chartCanvas = document.getElementById('employeeCompositionChart');
+                if (chartCanvas) {
+                    const companyCounts = employees.reduce((acc, employee) => {
+                        acc[employee.company] = (acc[employee.company] || 0) + 1;
+                        return acc;
+                    }, {});
+
+                    const labels = Object.keys(companyCounts);
+                    const data = Object.values(companyCounts);
+
+                    new Chart(chartCanvas, {
+                        type: 'doughnut',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Jumlah Karyawan',
+                                data: data,
+                                backgroundColor: [
+                                    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#8B5CF6',
+                                ],
+                                hoverOffset: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    align: 'center',
+                                    labels: {
+                                        padding: 20
+                                    }
+                                },
+                                title: {
+                                    display: false,
+                                    text: 'Komposisi Karyawan per Perusahaan'
+                                },
+                                datalabels: {
+                                    formatter: (value, context) => {
+                                        return value;
+                                    },
+                                    color: '#fff',
+                                    font: {
+                                        weight: 'bold',
+                                        size: 16,
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                updateActiveShiftDisplay();
+                setInterval(updateActiveShiftDisplay, 60000);
 
                 if (formattedSummaryType === 'human-resource-performance') {
                     const fullscreenBtn = document.getElementById('hr-fullscreen-btn');
@@ -444,14 +614,37 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }, 0);
         } else if (pageName === 'HUMAN RESOURCE PERFORMANCE') {
-             renderEmployeeManagementPage();
+            renderEmployeeManagementPage();
         } else {
             contentBody.innerHTML = `<p>Konten untuk halaman <strong>${pageName}</strong> sedang dalam pengembangan.</p>`;
         }
+        
+        if (addToHistory) {
+            history.pushState({ page: pageName }, '', `#${pageName.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`);
+        }
     }
-    
+
     // --- EVENT LISTENERS GLOBAL ---
     menuLinks.forEach(link => { link.addEventListener('click', (e) => { e.preventDefault(); navigateTo(link.dataset.page); }); });
+
+    window.addEventListener('popstate', function (event) {
+        if (event.state && event.state.page) {
+            navigateTo(event.state.page, false);
+        }
+    });
+
+    if (navBackBtn) {
+        navBackBtn.addEventListener('click', () => {
+            history.back();
+        });
+    }
+
+    if (navForwardBtn) {
+        navForwardBtn.addEventListener('click', () => {
+            history.forward();
+        });
+    }
+
     closeButtons.forEach(button => button.addEventListener('click', () => closeModal(button.closest('.modal'))));
     formPhotoInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -490,7 +683,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const saveScheduleBtn = document.getElementById('save-schedule-btn');
     if(saveScheduleBtn) { saveScheduleBtn.addEventListener('click', () => { document.querySelectorAll('.schedule-select').forEach(select => { const { date, regu } = select.dataset; if (!monthlySchedule[date]) monthlySchedule[date] = {}; monthlySchedule[date][regu] = select.value; }); saveSchedule(); alert('Jadwal berhasil disimpan!'); closeModal(shiftScheduleModal); }); }
-    
+
     const openShiftTimesBtn = document.getElementById('open-shift-times-btn');
     if(openShiftTimesBtn) { openShiftTimesBtn.addEventListener('click', openShiftTimesManager); }
 
@@ -500,16 +693,33 @@ document.addEventListener('DOMContentLoaded', function () {
     if(downloadRecapBtn) downloadRecapBtn.addEventListener('click', downloadRecapExcel);
     if(clearRecapBtn) clearRecapBtn.addEventListener('click', clearRecapData);
     if(toggleFullscreenBtn) toggleFullscreenBtn.addEventListener('click', toggleFullscreen);
-    if(refreshBtn) refreshBtn.addEventListener('click', () => location.reload());
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            const icon = refreshBtn.querySelector('i');
+    
+            icon.classList.add('icon-spin');
+            refreshBtn.disabled = true;
+    
+            setTimeout(() => {
+                navigateTo(currentPageName, false);
+    
+                icon.classList.remove('icon-spin');
+                refreshBtn.disabled = false;
+            }, 1000); 
+        });
+    }
+
     if(employeeForm) employeeForm.addEventListener('submit', handleEmployeeFormSubmit);
     if(scanButton) scanButton.addEventListener('click', processScan);
     if(nidScannerInput) nidScannerInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') processScan(); });
     if(monitoringFooter) monitoringFooter.addEventListener('click', (e) => { const editButton = e.target.closest('.k3-edit-btn'); if (editButton) { const targetId = editButton.dataset.target; const pElement = document.getElementById(targetId); const newValue = prompt(`Masukkan nilai baru untuk "${pElement.previousElementSibling.textContent}":`, pElement.textContent); if (newValue !== null && newValue.trim() !== "") { pElement.textContent = newValue.trim().toUpperCase(); saveK3Stats(); } } });
-    
+
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) { logoutBtn.addEventListener('click', () => { sessionStorage.removeItem('statusLogin'); alert("Anda telah berhasil logout."); window.location.href = 'login.html'; }); }
 
     // INISIALISASI APLIKASI
     loadData();
-    navigateTo('DASHBOARD');
+    history.replaceState({ page: 'DASHBOARD' }, '', '#dashboard');
+    navigateTo('DASHBOARD', false);
 });
