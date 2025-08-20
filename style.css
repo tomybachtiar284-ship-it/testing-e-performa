@@ -97,6 +97,48 @@ body {
     font-weight: 600;
     margin: 0;
 }
+/* --- Letakkan ini setelah .content-header h2 --- */
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Jarak antara tombol dan judul */
+}
+
+.nav-buttons {
+    display: flex;
+    gap: 8px; /* Jarak antara tombol back dan forward */
+}
+
+.btn-nav {
+    background-color: #e2e8f0;
+    color: #475569;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%; /* Membuatnya bulat */
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-nav:hover {
+    background-color: #cbd5e1;
+    color: #1e293b;
+}
+
+.btn-nav:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Atur jarak antar tombol */
+}
 /* --- Tombol Aksi --- */
 .action-bar {
     display: flex;
@@ -435,9 +477,11 @@ body {
 
 /* Header Dashboard */
 .dashboard-header {
-    text-align: center;
+    display: flex; /* Mengaktifkan Flexbox */
+    justify-content: space-between; /* Mendorong item ke ujung kiri dan kanan */
+    align-items: center; /* Menyelaraskan item secara vertikal */
     margin-bottom: 30px;
-    padding: 20px 0;
+    padding: 20px 0; /* Padding bisa disesuaikan jika perlu */
     border-bottom: 1px solid #eef2f7;
 }
 
@@ -447,19 +491,7 @@ body {
     margin: 0;
 }
 
-/* Tombol Pilih Opsi */
-#show-options-btn {
-    background: linear-gradient(135deg, #1a3b5d 0%, #2c5382 100%);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 6px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: inline-block;
-    margin-top: 20px;
-}
+#show-options-btn
 
 #show-options-btn:hover {
     transform: translateY(-2px);
@@ -613,7 +645,27 @@ body {
     font-size: 14px;
     color: #64748B;
 }
+.kpi-card .icon.active-shift { 
+    background-color: #6366F1; /* Warna Indigo (atau warna lain pilihan Anda) */
+}
+/* Styling untuk Wadah Grafik */
+.chart-wrapper {
+    margin-top: 25px;
+    padding-top: 25px;
+    border-top: 1px solid #eef2f7;
+}
 
+.chart-wrapper h3 {
+    font-size: 18px;
+    color: #1E293B;
+    margin-bottom: 20px;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px; /* Atur tinggi grafik */
+    width: 100%;
+}
 /* Styling untuk kolom kiri (Aktivitas) dan kanan (Video) */
 .hr-main-content-grid {
     display: grid;
@@ -782,6 +834,22 @@ body {
     font-size: 24px;
     font-weight: 700;
 }
+/* Tata Letak untuk Widget Bawah (Statistik K3 & Grafik) */
+.bottom-widgets {
+    display: flex; /* Membuat item di dalamnya bersebelahan */
+    align-items: flex-start; /* Menjaga item rata atas */
+    gap: 25px; /* Memberi jarak antara statistik dan grafik */
+}
+
+/* Mengatur agar statistik K3 mengisi sisa ruang yang ada */
+.bottom-widgets > .k3-stats-dashboard {
+    flex: 1; 
+}
+
+/* Mengatur lebar tetap untuk grafik agar tidak terlalu besar */
+.bottom-widgets > .chart-wrapper {
+    flex: 0 0 320px; /* Lebar grafik sekitar 320px */
+}
 
 /* Warna-warna kartu */
 .k3-card.yellow { background-color: #f59e0b; }
@@ -794,22 +862,23 @@ body {
 
 .marquee-container {
     width: 100%;
-    background-color: #0d2847; /* Warna latar belakang gelap */
-    color: #ffffff; /* Warna teks putih */
+    background-color: #f5f904; /* Warna latar belakang gelap */
+    color: #0e0d0d; /* Warna teks putih */
     padding: 12px 0;
     margin-bottom: 25px; /* Jarak ke kartu di bawahnya */
     border-radius: 8px;
     overflow: hidden; /* Sembunyikan teks yang keluar dari kotak */
     white-space: nowrap; /* Pastikan teks tidak turun ke baris baru */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(6, 170, 235, 0.1);
 }
 
 .marquee-container p {
     display: inline-block;
-    padding-left: 100%; /* Mulai dari sisi paling kanan */
-    animation: scroll-left 30s linear infinite; /* Terapkan animasi */
+    padding-left: 100%;
+    animation: scroll-left 30s linear infinite;
     font-weight: 600;
     text-transform: uppercase;
+    font-size: 20px; /* <-- Atur ukurannya di sini */
 }
 
 /* Definisi animasi */
@@ -848,4 +917,29 @@ body {
     opacity: 0.2; 
 
     z-index: -1; /* Posisikan lapisan ini di belakang konten */
+}
+/* Animasi Berputar untuk Ikon Refresh */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Kelas untuk menerapkan animasi */
+.icon-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* (Opsional) Efek transisi pada tombol agar lebih halus saat dihover */
+.btn-secondary {
+    /* ... (kode Anda yang sudah ada) ... */
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px); /* Sedikit terangkat saat dihover */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
