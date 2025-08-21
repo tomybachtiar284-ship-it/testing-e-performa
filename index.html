@@ -31,25 +31,25 @@
             </nav>
         </aside>
         <main class="main-content">
-<div class="content-header">
-    <div class="header-left">
-        <div class="nav-buttons">
-            <button id="nav-back-btn" class="btn-nav" title="Kembali"><i class="fas fa-arrow-left"></i></button>
-            <button id="nav-forward-btn" class="btn-nav" title="Maju"><i class="fas fa-arrow-right"></i></button>
-        </div>
-        <h2 id="page-title">Dashboard</h2>
-    </div>
-    <div class="header-actions">
-        <button id="refresh-btn" class="btn-secondary" title="Refresh Data">
-            <i class="fas fa-sync-alt"></i> Refresh
-        </button>
-    </div>
-</div>
+			<div class="content-header">
+				<div class="header-left">
+					<div class="nav-buttons">
+						<button id="nav-back-btn" class="btn-nav" title="Kembali"><i class="fas fa-arrow-left"></i></button>
+						<button id="nav-forward-btn" class="btn-nav" title="Maju"><i class="fas fa-arrow-right"></i></button>
+					</div>
+					<h2 id="page-title">Dashboard</h2>
+				</div>
+				<div class="header-actions">
+					<button id="refresh-btn" class="btn-secondary" title="Refresh Data">
+						<i class="fas fa-sync-alt"></i> Refresh
+					</button>
+				</div>
+			</div>
             <div class="content-body" id="content-body">
             </div>
         </main>
     </div>
-    <!-- Modal Form Karyawan -->
+
     <div id="employeeFormModal" class="modal">
         <div class="modal-content form-modal">
             <span class="close-button">&times;</span>
@@ -93,7 +93,7 @@
             </form>
         </div>
     </div>
-    <!-- Modal Dashboard Monitoring -->
+
     <div id="monitoringModal" class="modal modal-xl">
         <div class="modal-content">
             <div class="monitoring-header">
@@ -166,7 +166,7 @@
             </div>
         </div>
     </div>
-    <!-- Modal Rekapitulasi -->
+
     <div id="recapModal" class="modal modal-xl">
         <div class="modal-content">
             <div class="monitoring-header">
@@ -195,7 +195,7 @@
             </div>
         </div>
     </div>
-    <!-- Modal Jadwal Shift -->
+
     <div id="shiftScheduleModal" class="modal modal-xl">
         <div class="modal-content">
             <div class="monitoring-header">
@@ -215,8 +215,7 @@
             </div>
         </div>
     </div>
-   
-    <!-- Modal Pengaturan Jam Shift -->
+    
     <div id="shiftTimesModal" class="modal">
         <div class="modal-content form-modal" style="max-width: 600px;">
             <span class="close-button">&times;</span>
@@ -259,6 +258,9 @@
             </form>
         </div>
     </div>
+    
+    <div id="toast-notification" class="toast"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -267,8 +269,6 @@
 </body>
 </html>
 
-<!-- ===== KODE PENJAGA (LOGIN CHECK) ===== -->
-<!-- Cek hanya jika kita berada di file index.html -->
 <script>
 if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/')) {
     if (sessionStorage.getItem('statusLogin') !== 'true') {
