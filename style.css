@@ -366,7 +366,7 @@ body {
 .details-header span { font-size: 12px; color: #a9c1d9; }
 .details-header p { font-size: 18px; font-weight: 600; }
 .details-photo-frame { flex-shrink: 0; }
-.details-photo-frame img { width: 150px; height: 200px; object-fit: cover; border-radius: 8px; }
+.details-photo-frame img { width: 250px; height: 250px; object-fit: cover; border-radius: 8px; }
 .monitoring-info-stats { display: flex; gap: 20px; flex-wrap: wrap; }
 .info-grid, .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; flex: 1; }
 .info-item, .stat-box { padding: 15px; border-radius: 8px; text-align: center; background: rgba(255,255,255,0.05); }
@@ -467,7 +467,7 @@ body {
 
 /* === MEMPERBESAR LOGO DI DASHBOARD MONITORING === */
 .modal-xl .modal-content .details-company-logo img {
-    width: 100px !important; /* Ubah ukuran sesuai keinginan, contoh: 100px */
+    width: 400px !important; /* Ubah ukuran sesuai keinginan, contoh: 100px */
     height: 100px !important; /* Ubah ukuran sesuai keinginan, contoh: 100px */
     object-fit: contain;
     border-radius: 4px;
@@ -942,4 +942,91 @@ body {
 .btn-secondary:hover {
     transform: translateY(-2px); /* Sedikit terangkat saat dihover */
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+/* ===== STYLE UNTUK NOTEPAD INFORMASI ===== */
+.notepad-container {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 25px;
+    margin-top: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.notepad-container h4 {
+    color: #0d2847;
+    margin-bottom: 15px;
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.notepad-textarea {
+    width: 100%;
+    min-height: 150px;
+    padding: 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    resize: vertical; /* Memungkinkan pengguna mengubah tinggi textarea */
+    margin-bottom: 15px;
+}
+
+.notepad-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+}
+/* ===== STYLE UNTUK TOAST NOTIFICATION ===== */
+.toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #11d4ba; /* Warna hijau sukses */
+    color: white;
+    padding: 16px 25px;
+    border-radius: 8px;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(221, 8, 8, 0.15);
+    font-size: 16px;
+    font-weight: 600;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.5s, bottom 0.5s, visibility 0.5s;
+}
+
+.toast.show {
+    visibility: visible;
+    opacity: 1;
+    bottom: 50px;
+}
+.blinking-info-container {
+    background-color: #fde047;
+    color: #1e3a8a;
+    padding: 15px;
+    border-radius: 10px;
+    margin-top: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    /* Properti baru untuk meratakan ikon dan teks */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px; /* Jarak antara ikon dan teks */
+}
+.blinking-info-container .fas { /* Jbesar kecil tanda seru */
+    font-size: 2.3em;
+}
+
+.blinking-text {
+    font-size: 1.5em;
+    font-weight: bold;
+    animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+    50% { opacity: 0; }
 }
