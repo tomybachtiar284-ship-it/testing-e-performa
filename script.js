@@ -1,5 +1,5 @@
 // ===============================================
-//           KODE FINAL SCRIPT.JS (LENGKAP)
+//         KODE SCRIPT.JS (FINAL & LENGKAP)
 // ===============================================
 document.addEventListener('DOMContentLoaded', function () {
     Chart.register(ChartDataLabels);
@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let clockInterval = null;
     let isFullscreen = false;
     let currentPageName = '';
+    let notepadContent = ''; // State untuk notepad
     const lateSound = new Audio('sounds/terlambat.mp3');
     const scanSound = new Audio('sounds/masuk.mp3');
     const companyLogos = { "PT PLN NPS": "images/imagespln_nps.png", "PT MKP": "images/imagesmkp.png", "MKP IC": "images/imagesmkp_ic.png", "SECURITY": "images/scrt.png", "Visitor": "images/visitor.png" };
@@ -61,6 +62,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function saveEmployees() { localStorage.setItem('employees', JSON.stringify(employees)); }
     function saveRecapLog() { localStorage.setItem('recapLog', JSON.stringify(recapLog)); }
     function saveCompanies() { localStorage.setItem('companies', JSON.stringify(companies)); }
+    function saveNotepadContent() { localStorage.setItem('notepadContent', notepadContent); }
+    function loadNotepadContent() { notepadContent = localStorage.getItem('notepadContent') || 'PENGUMUMAN PENTING UNTUK SELURUH KARYAWAN.'; }
     function saveK3Stats() {
         const k3Stats = {
             'k3-jam-hilang': document.getElementById('k3-jam-hilang')?.textContent || '0',
@@ -100,6 +103,7 @@ document.addEventListener('DOMContentLoaded', function () {
             employees = []; recapLog = []; companies = ["PT PLN NPS", "PT MKP", "PT MKP IC", "Security", "Visitor"]; monitoringLog = []; monthlySchedule = {};
         }
         loadShiftRules();
+        loadNotepadContent(); // Memuat data notepad
         if (employees.length === 0) {
             employees = [
                 { nid: "9120034APN", name: "RAFLI", position: "SECURITY", company: "Security", photoUrl: "", inOutStatus: 'Keluar', regu: 'A' },
@@ -116,7 +120,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- FUNGSI-FUNGSI APLIKASI ---
     function renderCompanyOptions() { const companySelect = document.getElementById('form-company'); if(companySelect) { companySelect.innerHTML = '<option value="">Pilih Company</option>' + companies.map(company => `<option value="${company}">${company}</option>`).join(''); } }
+    
+    function toggleNotepad() {
+        const notepadContainer = document.getElementById('notepad-container');
+        if (!notepadContainer) return;
 
+        const isHidden = notepadContainer.style.display === 'none';
+
+        if (isHidden) {
+            notepadContainer.style.display = 'block';
+            const notepadTextarea = document.getElementById('notepad-textarea');
+            const saveBtn = document.getElementById('save-notepad-btn');
+
+            notepadTextarea.value = notepadContent;
+
+            saveBtn.onclick = function() {
+                notepadContent = notepadTextarea.value;
+                saveNotepadContent();
+                alert('Catatan berhasil disimpan!');
+                notepadContainer.style.display = 'none';
+
+                const blinkingTextElement = document.getElementById('blinking-text');
+                if (blinkingTextElement && currentPageName === 'DASHBOARD') {
+                    blinkingTextElement.textContent = notepadContent.toUpperCase();
+                }
+            };
+
+        } else {
+            notepadContainer.style.display = 'none';
+        }
+    }
+    
     function renderEmployeeManagementPage() {
         contentBody.innerHTML = `
             <div class="action-bar">
@@ -124,7 +158,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 <button class="btn-success" data-action="open-recap"><i class="fas fa-list"></i> Rekapitulasi</button>
                 <button id="btn-show-list" class="btn-primary" style="background: #0d2847; border-color: #fff;"><i class="fas fa-list-alt"></i> Manajemen Karyawan</button>
                 <button class="btn-primary" data-action="open-schedule-manager"><i class="fas fa-calendar-alt"></i> Atur Jadwal Shift</button>
+                <button class="btn-primary" data-action="toggle-notepad" style="background-color: #f59e0b;"><i class="fas fa-sticky-note"></i> Catatan Informasi</button>
             </div>
+
+            <div id="notepad-container" class="notepad-container" style="display: none;">
+                 <h4><i class="fas fa-book-open"></i> Catatan & Informasi Penting</h4>
+                 <textarea id="notepad-textarea" class="notepad-textarea" placeholder="Tulis catatan atau ringkasan penting di sini..."></textarea>
+                 <button id="save-notepad-btn" class="btn-success"><i class="fas fa-save"></i> Simpan Catatan</button>
+            </div>
+
             <div id="employee-table-wrapper" style="display: none;"></div>
         `;
     
@@ -369,18 +411,18 @@ document.addEventListener('DOMContentLoaded', function () {
                         const scheduleForYesterday = monthlySchedule[yesterdayKey];
 
                         if(now < endTime){ // Jika sekarang masih pagi hari (sebelum jam pulang shift malam)
-                           if(scheduleForYesterday && scheduleForYesterday[regu] === shiftName){
+                            if(scheduleForYesterday && scheduleForYesterday[regu] === shiftName){
                                 activeRegu = regu;
                                 break;
-                           }
+                            }
                         } else if (now >= startTime) { // Jika sekarang sudah masuk jam kerja shift malam
                            activeRegu = regu;
                            break;
                         }
                     } else { // Shift normal (Pagi atau Sore)
                         if (now >= startTime && now < endTime) {
-                           activeRegu = regu;
-                           break;
+                            activeRegu = regu;
+                            break;
                         }
                     }
                 }
@@ -510,6 +552,10 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <div class="video-container">
                                     <h3><i class="fas fa-video"></i> PLTU AMPANA </h3>
                                     <div class="video-wrapper"><video src="videos/PLTUAMPANA.mp4" autoplay loop muted playsinline>Browser Anda tidak mendukung tag video.</video></div>
+                                    <div class="blinking-info-container">
+                                        <i class="fas fa-triangle-exclamation"></i>
+                                        <p id="blinking-text" class="blinking-text"></p>
+                                    </div>
                                 </div>
                             </div>
                         </div>`;
@@ -576,6 +622,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 
                 updateActiveShiftDisplay();
                 setInterval(updateActiveShiftDisplay, 60000);
+
+                const blinkingTextElement = document.getElementById('blinking-text');
+                if (blinkingTextElement) {
+                    blinkingTextElement.textContent = notepadContent.toUpperCase();
+                }
 
                 if (formattedSummaryType === 'human-resource-performance') {
                     const fullscreenBtn = document.getElementById('hr-fullscreen-btn');
@@ -678,6 +729,7 @@ document.addEventListener('DOMContentLoaded', function () {
             case 'manage-companies': manageCompanies(); break;
             case 'download-template': downloadExcelTemplate(); break;
             case 'open-schedule-manager': openShiftScheduleManager(); break;
+            case 'toggle-notepad': toggleNotepad(); break;
         }
     });
 
