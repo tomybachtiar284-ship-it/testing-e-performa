@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PERFORMA</title>
-    <link rel="stylesheet" href="style.css" />
+    <title>EnergiX</title>
+    <link rel="stylesheet" href="fix-style.css?v=8" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -12,8 +12,8 @@
         <aside class="sidebar">
             <div class="logo">
                 <img src="images/performalogo.png" onerror="this.src='https://placehold.co/180x60/0d2847/ffffff?text=PERFORMA';" alt="Logo PERFORMA" class="logo-img" />
-                <h1>PERFORMA</h1>
-                <p>Plant & Employee Resource Management</p>
+                <h1>"EnergiX</h1>
+                <p>“Smart Solution for Smarter Power/“Solusi Cerdas untuk Energi yang Lebih Cerdas.”</p>
             </div>
             <nav class="menu">
                 <ul>
@@ -24,8 +24,8 @@
                     <li><a href="#" data-page="WAREHOUSE & INVENTORY"><i class="fas fa-book"></i> WAREHOUSE & INVENTORY</a></li>
                     <li><a href="#" data-page="TOOLS MANAGEMENT"><i class="fas fa-book"></i> TOOLS MANAGEMENT</a></li>
                     <li><a href="#" data-page="SOP & WORK INSTRUCTIONS"><i class="fas fa-book"></i> SOP & WORK INSTRUCTIONS</a></li>
-                     <li><a href="#" data-page="RENEWABLE ENERGY"><i class="fas fa-solar-panel"></i> RENEWABLE ENERGY</a></li>
-                     <li><a href="#" data-page="CSR"><i class="fas fa-hand-holding-heart"></i> CSR</a></li>
+                    <li><a href="#" data-page="RENEWABLE ENERGY"><i class="fas fa-solar-panel"></i> RENEWABLE ENERGY</a></li>
+                    <li><a href="#" data-page="CSR"><i class="fas fa-hand-holding-heart"></i> CSR</a></li>
                 </ul>
                 <button id="logout-btn" class="btn-delete" style="width: 85%; margin: 25px auto 0; display: block;">
                     <i class="fas fa-sign-out-alt"></i> Logout
@@ -322,10 +322,6 @@
         </div>
     </div>
 
-    <div id="toast-notification" class="toast"></div>
-
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="script.js"></script>
     <div id="rincianPerhitunganModal" class="modal modal-xl">
         <div class="modal-content">
             <div class="monitoring-header">
@@ -360,6 +356,10 @@
                             <p>Emisi CO2 / Jam</p>
                             <span class="calc-formula"><span id="detail-baseline-massa-3">0</span> * <span id="detail-karbon-bb-1">0</span>% * (44/12) = <span class="calc-result" id="detail-baseline-emisi">0</span> kg CO2/jam</span>
                         </div>
+                        <div class="calc-step">
+                            <p>Emisi SO2 / Jam</p>
+                            <span class="calc-formula"><span id="detail-baseline-massa-4">0</span> * <span id="detail-sulfur-bb-1">0</span>% * 2 = <span class="calc-result" id="detail-baseline-emisi-so2">0</span> kg SO2/jam</span>
+                        </div>
                     </div>
                     <div class="rincian-section">
                         <h4>3. Skenario Co-firing (<span id="detail-persen-cofiring-1">0</span>% Biomassa)</h4>
@@ -387,6 +387,10 @@
                             <p>Emisi CO2 / Jam</p>
                             <span class="calc-formula"><span id="detail-co-massa-bb-2">0</span> * <span id="detail-karbon-bb-2">0</span>% * (44/12) = <span class="calc-result" id="detail-co-emisi">0</span> kg CO2/jam</span>
                         </div>
+                        <div class="calc-step">
+                            <p>Emisi SO2 / Jam</p>
+                            <span class="calc-formula"><span id="detail-co-massa-bb-3">0</span> * <span id="detail-sulfur-bb-2">0</span>%*2 + <span id="detail-co-massa-bio-3">0</span> * <span id="detail-sulfur-bio">0</span>%*2 = <span class="calc-result" id="detail-co-emisi-so2">0</span> kg SO2/jam</span>
+                        </div>
                     </div>
                 </div>
 
@@ -401,6 +405,10 @@
                         <span class="calc-result" id="detail-final-pengurangan-co2">0 ton CO2/tahun</span>
                     </div>
                     <div class="calc-step">
+                        <p>Pengurangan SO2 Tahunan</p>
+                        <span class="calc-result" id="detail-final-pengurangan-so2">0 ton SO2/tahun</span>
+                    </div>
+                    <div class="calc-step">
                         <p>% Pemanfaatan Biomassa</p>
                         <span class="calc-result"><span id="detail-final-persen-energi">0</span>% Energi / <span id="detail-final-persen-massa">0</span>% Massa</span>
                     </div>
@@ -410,12 +418,9 @@
     </div>
 </body>
 </html>
-
-
 <script>
 if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/')) {
     if (sessionStorage.getItem('statusLogin') !== 'true') {
-        // Jika belum login, paksa kembali ke halaman login
         window.location.href = 'login.html';
     }
 }
