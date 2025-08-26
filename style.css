@@ -246,6 +246,78 @@ body {
     margin-bottom: 15px;
     border-bottom: 2px solid #cbd5e1;
 }
+/* Style untuk Halaman Equipment Data */
+.equipment-options {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.equipment-btn {
+    flex: 1;
+    padding: 25px;
+    font-size: 20px;
+    font-weight: 600;
+    border: 2px solid #0d2847;
+    background-color: #ffffff;
+    color: #0d2847;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+}
+
+.equipment-btn:hover {
+    background-color: #0d2847;
+    color: #ffffff;
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+.equipment-content-display {
+    padding: 30px;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    min-height: 40vh;
+    border: 1px solid #e2e8f0;
+}
+/* Style untuk sub-menu di halaman Pemeliharaan */
+.maintenance-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding: 20px;
+    background-color: #eef2f7;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.maintenance-btn {
+    flex-grow: 1;
+    padding: 15px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    border: 1px solid #94a3b8;
+    background-color: #ffffff;
+    color: #475569;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.maintenance-btn:hover, .maintenance-btn.active {
+    background-color: #1a3b5d;
+    color: #ffffff;
+    border-color: #1a3b5d;
+}
 /* --- Modal --- */
 .modal {
     display: none;
@@ -1029,4 +1101,678 @@ body {
 
 @keyframes blinker {
     50% { opacity: 0; }
+}
+/* ===== STYLE UNTUK PROFIL PENGGUNA DI SIDEBAR ===== */
+.profile-container {
+    display: flex;
+    flex-direction: column; /* Mengatur elemen menjadi kolom */
+    align-items: center; /* Membuat item berada di tengah horizontal */
+    gap: 8px; /* Mengurangi jarak antar elemen */
+    padding: 150px 20px;
+    margin-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#profile-name {
+    font-weight: 600;
+    color: #e0e0e0;
+    font-size: 14px;
+    text-align: center; /* Membuat teks nama berada di tengah */
+}
+
+#profile-picture {
+    width: 90px; /* Ukuran foto diperbesar sedikit */
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #3b82f6;
+}
+/* ===== STYLE UNTUK MODAL EDIT PROFIL ===== */
+.profile-link {
+    text-decoration: none;
+    display: block;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+.profile-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.profile-picture-section {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+#profile-pic-preview {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #e2e8f0;
+}
+.picture-buttons {
+    display: flex;
+    gap: 10px;
+}
+.btn-delete-outline {
+    background: none;
+    border: 1px solid #dc2626;
+    color: #dc2626;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+.form-actions {
+    margin-top: 30px;
+    text-align: right;
+}
+#save-profile-btn {
+    background-color: #0d2847;
+    color: white;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+}
+/* Helper Class */
+.hidden {
+    display: none !important;
+}
+/* Style untuk Halaman Equipment Data */
+.equipment-options {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.equipment-btn {
+    flex: 1;
+    padding: 25px;
+    font-size: 20px;
+    font-weight: 600;
+    border: 2px solid #0d2847;
+    background-color: #ffffff;
+    color: #0d2847;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+}
+
+/* PERHATIKAN BARIS .active DI SINI */
+.equipment-btn:hover, .equipment-btn.active {
+    background-color: #0d2847;
+    color: #ffffff;
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+.equipment-content-display {
+    padding: 30px;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    min-height: 40vh;
+    border: 1px solid #e2e8f0;
+}
+
+/* Style untuk sub-menu di halaman Pemeliharaan */
+.maintenance-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding: 20px;
+    background-color: #eef2f7;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.maintenance-btn {
+    flex-grow: 1;
+    padding: 15px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    border: 1px solid #94a3b8;
+    background-color: #ffffff;
+    color: #475569;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.maintenance-btn:hover, .maintenance-btn.active {
+    background-color: #1a3b5d;
+    color: #ffffff;
+    border-color: #1a3b5d;
+}
+/* Styling untuk tombol kategori di dalam halaman Mekanik */
+.maintenance-options.category-level {
+    background-color: #ffffff;
+    padding: 0;
+    border: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.maintenance-btn.category-btn {
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+#category-content-display {
+    margin-top: 20px;
+    padding: 20px;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    min-height: 30vh;
+}
+/* ===== STYLE UNTUK KALKULATOR CO-FIRING ===== */
+
+.kalkulator-container {
+    max-width: 900px;
+    margin: 0 auto;
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+}
+
+.kalkulator-container h1 {
+    text-align: center;
+    color: #0d2847;
+    margin-bottom: 10px;
+}
+
+.kalkulator-container p.deskripsi {
+    text-align: center;
+    color: #64748b;
+    margin-bottom: 30px;
+}
+
+.kalkulator-container .form-section {
+    margin-bottom: 2em;
+    border-top: 1px solid #eef2f7;
+    padding-top: 1.5em;
+}
+
+.kalkulator-container .form-section h3 {
+    color: #1a3b5d;
+    font-size: 18px;
+    margin-bottom: 1.5em;
+}
+
+.kalkulator-container .input-group {
+    margin-bottom: 1.2em;
+}
+
+.kalkulator-container .input-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #475569;
+}
+
+.kalkulator-container .input-group input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    font-size: 1rem;
+    background-color: #f8fafc;
+}
+
+.kalkulator-container .input-group input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+}
+
+.hasil-container {
+    padding: 25px;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.hasil-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.hasil-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #eef2f7;
+    font-size: 16px;
+}
+
+.hasil-item:last-child {
+    border-bottom: none;
+}
+
+.hasil-item p {
+    margin: 0;
+    font-weight: 600;
+    color: #334155;
+}
+
+.hasil-item span {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #0d2847;
+}
+
+.hasil-item.highlight {
+    background-color: #e6f7f0;
+    padding: 10px 15px;
+    margin: 5px -15px;
+    border-radius: 6px;
+}
+
+.hasil-item.highlight p {
+    color: #065f46;
+}
+
+.hasil-item.highlight span {
+    color: #10b981;
+}
+/* ===== STYLE UNTUK KALKULATOR FLUKTUATIF ===== */
+
+.parameter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+#blok-beban-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.blok-beban-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background-color: #f8fafc;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.blok-beban-item .input-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+.blok-beban-item .input-group label {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.blok-nomor {
+    font-weight: 600;
+    color: #475569;
+    min-width: 50px;
+}
+
+.btn-hapus-blok {
+    background-color: #fee2e2;
+    color: #ef4444;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 36px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.btn-hapus-blok:hover {
+    background-color: #ef4444;
+    color: white;
+}
+/* ===== STYLE BARU UNTUK MODAL RINCIAN PERHITUNGAN (GANTI YANG LAMA) ===== */
+.rincian-body {
+    padding: 15px;
+    background-color: #ffffff;
+    color: #334155;
+    max-height: 75vh;
+    overflow-y: auto;
+}
+
+.rincian-section {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.rincian-section h4 {
+    color: #0d2847;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 10px;
+    font-size: 18px;
+}
+
+.rincian-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.calc-step {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #eef2f7;
+    flex-wrap: wrap; /* Agar responsif di layar kecil */
+    gap: 10px;
+}
+.calc-step:last-child {
+    border-bottom: none;
+}
+
+.calc-step p {
+    margin: 0;
+    font-size: 14px;
+}
+
+.calc-formula {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: right;
+    color: #475569;
+}
+
+.calc-result {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 15px;
+    font-weight: 600;
+    color: #16a34a; /* Warna hijau untuk hasil */
+    background-color: #e6f7f0;
+    padding: 5px 10px;
+    border-radius: 4px;
+    min-width: 100px;
+    text-align: right;
+}
+
+.rincian-section.final-results .calc-result {
+     color: #0d2847;
+     background-color: #e2e8f0;
+     font-size: 16px;
+}
+
+/* Penyesuaian untuk layar kecil */
+@media (max-width: 992px) {
+    .rincian-grid {
+        grid-template-columns: 1fr;
+    }
+}
+/* ===== STYLE UNTUK KALKULATOR FLUKTUATIF (SUDAH ADA) ===== */
+
+.parameter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+#blok-beban-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.blok-beban-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background-color: #f8fafc;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.blok-beban-item .input-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+.blok-beban-item .input-group label {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.blok-nomor {
+    font-weight: 600;
+    color: #475569;
+    min-width: 50px;
+}
+
+.btn-hapus-blok {
+    background-color: #fee2e2;
+    color: #ef4444;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 36px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.btn-hapus-blok:hover {
+    background-color: #ef4444;
+    color: white;
+}
+
+/* ===== STYLE BARU UNTUK MODAL RINCIAN PERHITUNGAN ===== */
+.rincian-body {
+    padding: 15px;
+    background-color: #ffffff;
+    color: #334155;
+    max-height: 75vh;
+    overflow-y: auto;
+}
+
+.rincian-section {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.rincian-section h4 {
+    color: #0d2847;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 10px;
+    font-size: 18px;
+}
+
+.rincian-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.calc-step {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eef2f7;
+}
+.calc-step:last-child {
+    border-bottom: none;
+}
+
+.calc-step p {
+    margin: 0;
+}
+
+.calc-formula, .calc-result {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: right;
+}
+
+.calc-result {
+    color: #16a34a; /* Warna hijau untuk hasil */
+    background-color: #e6f7f0;
+    padding: 5px 10px;
+    border-radius: 4px;
+    min-width: 100px;
+}
+
+.rincian-section.final-results .calc-result {
+     color: #0d2847;
+     background-color: #e2e8f0;
+}
+
+/* Penyesuaian untuk layar kecil */
+@media (max-width: 992px) {
+    .rincian-grid {
+        grid-template-columns: 1fr;
+    }
+}
+/* ===== STYLE BARU UNTUK PEMILIHAN BAHAN BAKAR ===== */
+.parameter-grid-bahan-bakar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    align-items: end;
+}
+.pemisah-bahan-bakar {
+    border: none;
+    border-top: 1px dashed #cbd5e1;
+    margin: 25px 0;
+}
+/* ===== STYLE BARU UNTUK PEMILIHAN UNIT ===== */
+.unit-selector {
+    display: flex;
+    gap: 25px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+.unit-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.unit-option label {
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #334155;
+}
+.unit-option input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+/* ===== STYLE BARU UNTUK SUB-MENU RENEWABLE ENERGY ===== */
+.submenu-bar {
+    display: flex;
+    gap: 10px;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 25px;
+}
+
+.submenu-btn {
+    border: none;
+    background: none;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border-bottom: 3px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.submenu-btn:hover {
+    color: #1e293b;
+}
+
+.submenu-btn.active {
+    color: #0d2847;
+    border-bottom-color: #0d2847;
+}
+
+.re-content-section {
+    /* Kelas ini digunakan oleh JS untuk show/hide */
+    animation: fadeIn 0.5s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+/* ===== STYLE BARU UNTUK SUB-MENU RENEWABLE ENERGY ===== */
+.submenu-bar {
+    display: flex;
+    gap: 10px;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 25px;
+}
+
+.submenu-btn {
+    border: none;
+    background: none;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border-bottom: 3px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.submenu-btn:hover {
+    color: #e92b0a;
+}
+
+.submenu-btn.active {
+    color: #0d2847;
+    border-bottom-color: #0d2847;
+}
+
+.re-content-section {
+    animation: fadeIn 0.5s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
