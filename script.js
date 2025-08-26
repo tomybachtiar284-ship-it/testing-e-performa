@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const shiftTimesModal = document.getElementById('shiftTimesModal');
     const navBackBtn = document.getElementById('nav-back-btn');
     const navForwardBtn = document.getElementById('nav-forward-btn');
-
+    const toastNotification = document.getElementById('toast-notification');
 
     // --- STATE APLIKASI ---
     let employees = [];
@@ -68,14 +68,14 @@ document.addEventListener('DOMContentLoaded', function () {
         'Unit 2': { efisiensi: 38 }
     };
     const dataBatuBara = {
-        'Sub-Bituminous (Umum)': { kalor: 5500, harga: 900000, karbon: 60 },
-        'Lignite': { kalor: 4500, harga: 750000, karbon: 55 },
-        'Bituminous': { kalor: 6500, harga: 1100000, karbon: 70 }
+        'Sub-Bituminous (Umum)': { kalor: 5500, harga: 900000, karbon: 60, moisture: 25, ash: 10, sulfur: 0.5 },
+        'Lignite': { kalor: 4500, harga: 750000, karbon: 55, moisture: 35, ash: 15, sulfur: 0.8 },
+        'Bituminous': { kalor: 6500, harga: 1100000, karbon: 70, moisture: 15, ash: 8, sulfur: 0.3 }
     };
     const dataBiomassa = {
-        'Woodchip': { kalor: 4200, harga: 1200000 },
-        'Cangkang Sawit': { kalor: 4800, harga: 1350000 },
-        'Sekam Padi': { kalor: 3500, harga: 800000 }
+        'Woodchip': { kalor: 4200, harga: 1200000, moisture: 15, ash: 2, sulfur: 0.05 },
+        'Cangkang Sawit': { kalor: 4800, harga: 1350000, moisture: 12, ash: 1.5, sulfur: 0.03 },
+        'Sekam Padi': { kalor: 3500, harga: 800000, moisture: 18, ash: 18, sulfur: 0.1 }
     };
 
     // --- FUNGSI MANAJEMEN DATA ---
@@ -144,6 +144,21 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- FUNGSI MODAL ---
     function openModal(modalElement) { if (modalElement) { modalElement.style.display = 'block'; document.body.classList.add('modal-open'); } }
     function closeModal(modalElement = null) { if (modalElement) { modalElement.style.display = 'none'; } else { document.querySelectorAll('.modal').forEach(modal => { modal.style.display = 'none'; }); } document.body.classList.remove('modal-open'); if (clockInterval) { clearInterval(clockInterval); clockInterval = null; } }
+    
+    // --- FUNGSI NOTIFIKASI TOAST BARU ---
+    function showToast(message, isSuccess = true) {
+        if (!toastNotification) return;
+        toastNotification.textContent = message;
+        toastNotification.className = 'toast show';
+        if (isSuccess) {
+            toastNotification.style.backgroundColor = '#16a34a'; // Warna hijau sukses
+        } else {
+            toastNotification.style.backgroundColor = '#dc2626'; // Warna merah gagal
+        }
+        setTimeout(() => {
+            toastNotification.className = 'toast';
+        }, 3000);
+    }
 
     // --- FUNGSI-FUNGSI APLIKASI ---
     function loadUserProfile() {
@@ -198,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 loadUserProfile();
                 closeModal(document.getElementById('editProfileModal'));
-                alert('Profil berhasil diperbarui!');
+                showToast('Profil berhasil diperbarui!');
             });
         }
     }
@@ -217,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function () {
             saveBtn.onclick = function () {
                 notepadContent = notepadTextarea.value;
                 saveNotepadContent();
-                alert('Catatan berhasil disimpan!');
+                showToast('Catatan berhasil disimpan!');
                 notepadContainer.style.display = 'none';
                 const blinkingTextElement = document.getElementById('blinking-text');
                 if (blinkingTextElement && currentPageName === 'DASHBOARD') {
@@ -333,6 +348,11 @@ document.addEventListener('DOMContentLoaded', function () {
             formPhotoPreview.src = employeeData.photoUrl || 'https://placehold.co/100x120/cccccc/333?text=Preview';
         } else {
             formTitle.textContent = 'Tambah Karyawan';
+            document.getElementById('form-nid').value = '';
+            document.getElementById('form-name').value = '';
+            document.getElementById('form-position').value = '';
+            document.getElementById('form-company').value = '';
+            document.getElementById('form-regu').value = 'Daytime';
             formPhotoPreview.src = 'https://placehold.co/100x120/cccccc/333?text=Preview';
         }
         openModal(employeeFormModal);
@@ -342,10 +362,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const index = document.getElementById('employee-index').value;
         const photoUrl = formPhotoPreview.src.startsWith('data:image') ? formPhotoPreview.src : (index !== '' && employees[index] ? employees[index].photoUrl : '');
         const employeeData = { nid: document.getElementById('form-nid').value.trim().toUpperCase(), name: document.getElementById('form-name').value.trim().toUpperCase(), position: document.getElementById('form-position').value.trim().toUpperCase(), company: document.getElementById('form-company').value, regu: document.getElementById('form-regu').value, photoUrl, inOutStatus: (index !== '' && employees[index]) ? employees[index].inOutStatus : 'Keluar' };
-        if (index === '' && employees.some(emp => emp.nid === employeeData.nid)) { return alert(`NID "${employeeData.nid}" sudah ada.`); }
+        if (index === '' && employees.some(emp => emp.nid === employeeData.nid)) { showToast(`NID "${employeeData.nid}" sudah ada.`, false); return; }
         if (index !== '') { employees[index] = employeeData; } else { employees.push(employeeData); }
         saveEmployees();
         closeModal(employeeFormModal);
+        showToast(`Data karyawan "${employeeData.name}" berhasil disimpan.`);
         const tableWrapper = document.getElementById('employee-table-wrapper');
         if (tableWrapper && tableWrapper.style.display !== 'none') {
             tableWrapper.innerHTML = '';
@@ -356,8 +377,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const companyList = companies.map((c, i) => `${i + 1}. ${c}`).join('\n');
         const action = prompt(`Daftar Perusahaan:\n${companyList}\nKetik 'T' untuk TAMBAH, atau 'H' untuk HAPUS:`);
         if (!action) return;
-        if (action.trim().toUpperCase() === 'T') { const newCompany = prompt("Masukkan nama PT baru:"); if (newCompany && newCompany.trim()) { companies.push(newCompany.trim()); saveCompanies(); alert(`PT "${newCompany}" berhasil ditambahkan.`); } }
-        else if (action.trim().toUpperCase() === 'H') { const index = parseInt(prompt("Masukkan nomor PT yang akan dihapus:")) - 1; if (!isNaN(index) && index >= 0 && index < companies.length) { if (confirm(`Yakin ingin menghapus PT "${companies[index]}"?`)) { companies.splice(index, 1); saveCompanies(); alert(`PT berhasil dihapus.`); } } else { alert("Nomor PT tidak valid."); } }
+        if (action.trim().toUpperCase() === 'T') { const newCompany = prompt("Masukkan nama PT baru:"); if (newCompany && newCompany.trim()) { companies.push(newCompany.trim()); saveCompanies(); showToast(`PT "${newCompany}" berhasil ditambahkan.`); } }
+        else if (action.trim().toUpperCase() === 'H') { const index = parseInt(prompt("Masukkan nomor PT yang akan dihapus:")) - 1; if (!isNaN(index) && index >= 0 && index < companies.length) { if (confirm(`Yakin ingin menghapus PT "${companies[index]}"?`)) { companies.splice(index, 1); saveCompanies(); showToast(`PT berhasil dihapus.`); } } else { showToast("Nomor PT tidak valid.", false); } }
     }
     function handleExcelImport(event) {
         const file = event.target.files[0];
@@ -372,8 +393,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     const upperCaseRow = Object.fromEntries(Object.entries(row).map(([k, v]) => [String(k).toUpperCase(), v]));
                     if (upperCaseRow.NID && upperCaseRow.NAMA && upperCaseRow.JOBTITLE && upperCaseRow.COMPANY && upperCaseRow.REGU) { const nid = String(upperCaseRow.NID).toUpperCase(); if (!employees.some(emp => emp.nid === nid)) { employees.push({ nid, name: String(upperCaseRow.NAMA).toUpperCase(), position: String(upperCaseRow.JOBTITLE).toUpperCase(), company: String(upperCaseRow.COMPANY), regu: String(upperCaseRow.REGU), photoUrl: '', inOutStatus: 'Keluar' }); importedCount++; } }
                 });
-                if (importedCount > 0) { saveEmployees(); navigateTo('HUMAN RESOURCE PERFORMANCE'); alert(`${importedCount} data karyawan berhasil diimpor!`); } else { alert("Tidak ada data baru. Pastikan format kolom: NID, NAMA, JOBTITLE, COMPANY, REGU."); }
-            } catch (error) { alert("Gagal memproses file."); console.error(error); }
+                if (importedCount > 0) { saveEmployees(); navigateTo('HUMAN RESOURCE PERFORMANCE'); showToast(`${importedCount} data karyawan berhasil diimpor!`); } else { showToast("Tidak ada data baru. Pastikan format kolom: NID, NAMA, JOBTITLE, COMPANY, REGU.", false); }
+            } catch (error) { showToast("Gagal memproses file.", false); console.error(error); }
         };
         reader.readAsArrayBuffer(file);
     }
@@ -394,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const nidToFind = nidScannerInput.value.trim().toUpperCase();
         if (!nidToFind) return;
         const employee = employees.find(emp => emp.nid.toUpperCase() === nidToFind);
-        if (!employee) { nidScannerInput.value = ""; nidScannerInput.focus(); return alert(`Error: Karyawan dengan NID "${nidToFind}" tidak ditemukan.`); }
+        if (!employee) { nidScannerInput.value = ""; nidScannerInput.focus(); showToast(`Error: Karyawan dengan NID "${nidToFind}" tidak ditemukan.`, false); return; }
         scanSound.play();
         const newStatus = employee.inOutStatus === 'Masuk' ? 'Keluar' : 'Masuk';
         employee.inOutStatus = newStatus;
@@ -416,8 +437,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function openMonitoringDashboard() { openModal(monitoringModal); updateClock(); updateManpowerStats(); if (clockInterval) clearInterval(clockInterval); clockInterval = setInterval(updateClock, 1000); if (nidScannerInput) nidScannerInput.focus(); }
     function renderRecapTable() { if (recapLogBody) { recapLog.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); recapLogBody.innerHTML = recapLog.map(log => `<tr><td>${new Date(log.timestamp).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'medium' })}</td><td>${log.name}</td><td>${log.nid}</td><td>${log.position}</td><td>${log.company}</td><td>${log.status}</td><td class="log-keterangan">${log.keterangan || '-'}</td></tr>`).join(''); } }
     function openRecapModal() { renderRecapTable(); openModal(recapModal); }
-    function downloadRecapExcel() { if (recapLog.length === 0) return; const dataForExcel = recapLog.map(log => ({ Waktu: new Date(log.timestamp).toLocaleString('id-ID'), Nama: log.name, NID: log.nid, Jobtitle: log.position, Company: log.company, Status: log.status, Keterangan: log.keterangan || '-' })); const ws = XLSX.utils.json_to_sheet(dataForExcel); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Rekap Aktivitas"); XLSX.writeFile(wb, `Rekap_Aktivitas_${new Date().toISOString().slice(0, 10)}.xlsx`); }
-    function clearRecapData() { if ((recapLog.length > 0 || monitoringLog.length > 0) && confirm("Yakin ingin menghapus SEMUA data rekapitulasi DAN log monitoring?")) { recapLog = []; saveRecapLog(); monitoringLog = []; if (monitoringLogBody) monitoringLogBody.innerHTML = ''; localStorage.removeItem('monitoringLog'); employees.forEach(emp => emp.inOutStatus = 'Keluar'); saveEmployees(); navigateTo('HUMAN RESOURCE PERFORMANCE'); alert("Data rekapitulasi dan log monitoring telah dihapus."); } }
+    function downloadRecapExcel() { if (recapLog.length === 0) { showToast("Tidak ada data rekap untuk diunduh.", false); return; } const dataForExcel = recapLog.map(log => ({ Waktu: new Date(log.timestamp).toLocaleString('id-ID'), Nama: log.name, NID: log.nid, Jobtitle: log.position, Company: log.company, Status: log.status, Keterangan: log.keterangan || '-' })); const ws = XLSX.utils.json_to_sheet(dataForExcel); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Rekap Aktivitas"); XLSX.writeFile(wb, `Rekap_Aktivitas_${new Date().toISOString().slice(0, 10)}.xlsx`); }
+    function clearRecapData() { if ((recapLog.length > 0 || monitoringLog.length > 0) && confirm("Yakin ingin menghapus SEMUA data rekapitulasi DAN log monitoring?")) { recapLog = []; saveRecapLog(); monitoringLog = []; if (monitoringLogBody) monitoringLogBody.innerHTML = ''; localStorage.removeItem('monitoringLog'); employees.forEach(emp => emp.inOutStatus = 'Keluar'); saveEmployees(); navigateTo('HUMAN RESOURCE PERFORMANCE'); showToast("Data rekapitulasi dan log monitoring telah dihapus."); } }
     function toggleFullscreen() { isFullscreen = !isFullscreen; if (monitoringModal) { monitoringModal.classList.toggle('modal-fullscreen', isFullscreen); toggleFullscreenBtn.innerHTML = isFullscreen ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>'; } }
     function openShiftScheduleManager(targetMonth, targetYear) {
         if (!shiftScheduleModal) return;
@@ -457,11 +478,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!displayElement) return;
         const now = new Date();
         const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        const scheduleForToday = monthlySchedule[todayKey];
+        const scheduleForDay = monthlySchedule[todayKey];
         let activeRegu = null;
-        if (scheduleForToday) {
+        if (scheduleForDay) {
             for (const regu of ['A', 'B', 'C', 'D']) {
-                const shiftName = scheduleForToday[regu];
+                const shiftName = scheduleForDay[regu];
                 if (shiftName && shiftName !== 'Libur') {
                     const rule = shiftRules[shiftName];
                     const startTime = new Date();
@@ -500,8 +521,30 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     }
-
-    // --- FUNGSI-FUNGSI BARU UNTUK RENEWABLE ENERGY ---
+    
+    // --- FUNGSI BARU: Memuat dummy data ---
+    function loadDummyData() {
+        if (employees.length > 5) {
+            showToast("Dummy data sudah dimuat.", false);
+            return;
+        }
+    
+        const dummyEmployees = [
+            { nid: "1001", name: "BUDI SANTOSO", position: "OPERATOR BOILER", company: "PT PLN NPS", photoUrl: "", inOutStatus: 'Keluar', regu: 'A' },
+            { nid: "1002", name: "SITI AMINAH", position: "SUPERVISOR MEKANIK", company: "PT MKP", photoUrl: "", inOutStatus: 'Masuk', regu: 'B' },
+            { nid: "1003", name: "JOKO SUSILO", position: "STAFF ELEKTRIK", company: "PT PLN NPS", photoUrl: "", inOutStatus: 'Keluar', regu: 'C' },
+            { nid: "1004", name: "MARYAM WIJAYA", position: "HR SPV", company: "PT MKP IC", photoUrl: "", inOutStatus: 'Keluar', regu: 'Daytime' },
+            { nid: "1005", name: "DEDY PRASETYO", position: "SECURITY", company: "Security", photoUrl: "", inOutStatus: 'Masuk', regu: 'D' },
+            { nid: "1006", name: "EKA PUTRI", position: "INSTRUMENT ENGR", company: "PT PLN NPS", photoUrl: "", inOutStatus: 'Keluar', regu: 'A' },
+            { nid: "1007", name: "FAJAR HERMAWAN", position: "KOORDINATOR OPERASI", company: "PT MKP", photoUrl: "", inOutStatus: 'Masuk', regu: 'B' },
+            { nid: "1008", name: "GINA LESTARI", position: "STAFF KEUANGAN", company: "PT MKP IC", photoUrl: "", inOutStatus: 'Keluar', regu: 'Daytime' },
+            { nid: "1009", name: "HADI RAHMAN", position: "K3L OFFICER", company: "PT PLN NPS", photoUrl: "", inOutStatus: 'Keluar', regu: 'C' },
+        ];
+        employees = [...employees, ...dummyEmployees];
+        saveEmployees();
+        showToast("Dummy data berhasil ditambahkan!", true);
+    }
+    
     function setupRenewableEnergyTabs() {
         const submenuBtns = document.querySelectorAll('.submenu-btn');
         const contentSections = document.querySelectorAll('.re-content-section');
@@ -516,10 +559,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             });
         });
-
-        // ### CATATAN: Dulu ada rincianModal.querySelector di sini.
-        // ### Itu sudah tidak dibutuhkan karena tombol close modal Anda
-        // ### sudah ditangani secara global oleh event listener untuk .close-button
         
         setupKalkulatorFluktuatifListeners();
         setupReferensiListeners();
@@ -538,6 +577,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const karbonBatubaraInput = document.getElementById('karbonBatubara');
         const kalorBiomassaInput = document.getElementById('kalorBiomassa');
         const hargaBiomassaInput = document.getElementById('hargaBiomassa');
+
+        const moistureBatubaraInput = document.getElementById('moistureBatubara');
+        const ashBatubaraInput = document.getElementById('ashBatubara');
+        const sulfurBatubaraInput = document.getElementById('sulfurBatubara');
+        const moistureBiomassaInput = document.getElementById('moistureBiomassa');
+        const ashBiomassaInput = document.getElementById('ashBiomassa');
+        const sulfurBiomassaInput = document.getElementById('sulfurBiomassa');
+        
         const unitRadios = document.querySelectorAll('input[name="unit-pembangkit"]');
         const efisiensiInput = document.getElementById('efisiensi');
 
@@ -563,15 +610,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if(unitRadios.length > 0){
-                 unitRadios.forEach(radio => {
-                    radio.addEventListener('change', function() {
-                        const selectedUnitData = dataUnitPembangkit[this.value];
-                        if (selectedUnitData) {
-                            efisiensiInput.value = selectedUnitData.efisiensi;
-                        }
-                    });
-                });
-                document.querySelector('input[name="unit-pembangkit"]:checked').dispatchEvent(new Event('change'));
+             unitRadios.forEach(radio => {
+                 radio.addEventListener('change', function() {
+                     const selectedUnitData = dataUnitPembangkit[this.value];
+                     if (selectedUnitData) {
+                         efisiensiInput.value = selectedUnitData.efisiensi;
+                     }
+                 });
+             });
+             document.querySelector('input[name="unit-pembangkit"]:checked').dispatchEvent(new Event('change'));
         }
 
         if(jenisBatubaraSelect && jenisBiomassaSelect){
@@ -588,6 +635,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     kalorBatubaraInput.value = selectedData.kalor;
                     hargaBatubaraInput.value = selectedData.harga;
                     karbonBatubaraInput.value = selectedData.karbon;
+                    moistureBatubaraInput.value = selectedData.moisture;
+                    ashBatubaraInput.value = selectedData.ash;
+                    sulfurBatubaraInput.value = selectedData.sulfur;
                 }
             });
             
@@ -596,6 +646,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 if(selectedData){
                     kalorBiomassaInput.value = selectedData.kalor;
                     hargaBiomassaInput.value = selectedData.harga;
+                    moistureBiomassaInput.value = selectedData.moisture;
+                    ashBiomassaInput.value = selectedData.ash;
+                    sulfurBiomassaInput.value = selectedData.sulfur;
                 }
             });
 
@@ -638,26 +691,35 @@ document.addEventListener('DOMContentLoaded', function () {
         
         const efisiensi = parseFloat(document.getElementById('efisiensi').value) / 100;
         const persenCoFiring = parseFloat(document.getElementById('persenCoFiring').value) / 100;
-        const karbonBatubara = parseFloat(document.getElementById('karbonBatubara').value) / 100;
+
+        const jenisBatubara = document.getElementById('jenis-batubara').value;
+        const jenisBiomassa = document.getElementById('jenis-biomassa').value;
+
         const kalorBatubara = parseFloat(document.getElementById('kalorBatubara').value);
-        const kalorBiomassa = parseFloat(document.getElementById('kalorBiomassa').value);
         const hargaBatubara = parseFloat(document.getElementById('hargaBatubara').value);
+        const karbonBatubara = parseFloat(document.getElementById('karbonBatubara').value) / 100;
+        const sulfurBatubara = parseFloat(document.getElementById('sulfurBatubara').value) / 100;
+
+        const kalorBiomassa = parseFloat(document.getElementById('kalorBiomassa').value);
         const hargaBiomassa = parseFloat(document.getElementById('hargaBiomassa').value);
-        
-        if (isNaN(efisiensi) || isNaN(persenCoFiring) || isNaN(karbonBatubara) || isNaN(kalorBatubara) || isNaN(kalorBiomassa) || isNaN(hargaBatubara) || isNaN(hargaBiomassa)) {
-            alert("Mohon isi semua field di 'Parameter Umum' & 'Data Bahan Bakar' dengan angka yang valid.");
+        const sulfurBiomassa = parseFloat(document.getElementById('sulfurBiomassa').value) / 100;
+
+
+        if (isNaN(efisiensi) || isNaN(persenCoFiring) || isNaN(karbonBatubara) || isNaN(kalorBatubara) || isNaN(kalorBiomassa) || isNaN(hargaBatubara) || isNaN(hargaBiomassa) || isNaN(sulfurBatubara) || isNaN(sulfurBiomassa)) {
+            showToast("Mohon isi semua field di 'Parameter Umum' & 'Data Bahan Bakar' dengan angka yang valid.", false);
             return;
         }
 
         let totalJamOperasi = 0;
         let totalKebutuhanBiomassaTon = 0;
         let totalPenguranganCo2Ton = 0;
+        let totalPenguranganSO2Ton = 0;
         let totalBiayaBaseline = 0;
         let totalBiayaCofiring = 0;
 
         const blokBebanItems = document.querySelectorAll('.blok-beban-item');
         if (blokBebanItems.length === 0) {
-            alert("Mohon tambahkan minimal satu blok beban.");
+            showToast("Mohon tambahkan minimal satu blok beban.", false);
             return;
         }
         
@@ -665,14 +727,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const bebanMwBlokPertama = parseFloat(blokPertama.querySelector('.input-beban').value);
         const jamOperasiBlokPertama = parseFloat(blokPertama.querySelector('.input-jam').value);
 
-        if(isNaN(bebanMwBlokPertama) || isNaN(jamOperasiBlokPertama)){
-            alert("Mohon isi data pada Blok 1 untuk menampilkan rincian.");
+        if(isNaN(bebanMwBlokPertama) || isNaN(jamOperasiBlokPertama) || bebanMwBlokPertama <= 0 || jamOperasiBlokPertama <= 0){
             if(rincianBtn) rincianBtn.style.display = 'none';
         } else {
-             dataUntukRincian = {
+            dataUntukRincian = {
                 bebanMw: bebanMwBlokPertama,
                 jamOperasi: jamOperasiBlokPertama,
-                efisiensi, persenCoFiring, karbonBatubara, kalorBatubara, kalorBiomassa, hargaBatubara, hargaBiomassa
+                efisiensi, persenCoFiring, karbonBatubara, kalorBatubara, kalorBiomassa, hargaBatubara, hargaBiomassa,
+                sulfurBatubara, sulfurBiomassa
             };
         }
 
@@ -681,7 +743,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const jamOperasi = parseFloat(blok.querySelector('.input-jam').value);
 
             if (isNaN(bebanMw) || isNaN(jamOperasi) || bebanMw <= 0 || jamOperasi <= 0) {
-                alert("Mohon isi semua field 'Beban' dan 'Jam Operasi' di setiap blok dengan angka positif.");
+                showToast("Mohon isi semua field 'Beban' dan 'Jam Operasi' di setiap blok dengan angka positif.", false);
                 if(rincianBtn) rincianBtn.style.display = 'none';
                 return;
             }
@@ -697,12 +759,18 @@ document.addEventListener('DOMContentLoaded', function () {
             const massaBatubaraCofiring_kg_jam = energiDariBatubara_kkal / kalorBatubara;
             const biayaCofiring_jam = ((massaBatubaraCofiring_kg_jam / 1000) * hargaBatubara) + ((massaBiomassa_kg_jam / 1000) * hargaBiomassa);
             const emisiBaseline_kg_jam = massaBatuBaraBaseline_kg_jam * karbonBatubara * (44 / 12);
+            
             const emisiCofiring_kg_jam = massaBatubaraCofiring_kg_jam * karbonBatubara * (44 / 12);
+            const emisiSO2_kg_jam = (massaBatubaraCofiring_kg_jam * sulfurBatubara * 2) + (massaBiomassa_kg_jam * sulfurBiomassa * 2);
+            const emisiSO2_baseline_kg_jam = massaBatuBaraBaseline_kg_jam * sulfurBatubara * 2;
+            
             const penguranganCo2_kg_jam = emisiBaseline_kg_jam - emisiCofiring_kg_jam;
+            const penguranganSO2_kg_jam = emisiSO2_baseline_kg_jam - emisiSO2_kg_jam;
 
             totalJamOperasi += jamOperasi;
             totalKebutuhanBiomassaTon += (massaBiomassa_kg_jam * jamOperasi) / 1000;
             totalPenguranganCo2Ton += (penguranganCo2_kg_jam * jamOperasi) / 1000;
+            totalPenguranganSO2Ton += (penguranganSO2_kg_jam * jamOperasi) / 1000;
             totalBiayaBaseline += biayaBaseline_jam * jamOperasi;
             totalBiayaCofiring += biayaCofiring_jam * jamOperasi;
         }
@@ -710,22 +778,20 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('totalJamOperasi').innerText = formatAngka(totalJamOperasi);
         document.getElementById('totalKebutuhanBiomassa').innerText = formatAngka(totalKebutuhanBiomassaTon, 1);
         document.getElementById('totalPenguranganCo2').innerText = formatAngka(totalPenguranganCo2Ton, 1);
+        document.getElementById('totalPenguranganSO2').innerText = formatAngka(totalPenguranganSO2Ton, 1);
         document.getElementById('totalBiayaBaseline').innerText = formatRupiah(totalBiayaBaseline);
         document.getElementById('totalBiayaCofiring').innerText = formatRupiah(totalBiayaCofiring);
         document.getElementById('totalSelisihBiaya').innerText = formatRupiah(totalBiayaCofiring - totalBiayaBaseline);
         
         document.getElementById('hasilKalkulasi').style.display = 'block';
-        if (rincianBtn && !isNaN(dataUntukRincian.bebanMw)) {
+        if (rincianBtn && dataUntukRincian.bebanMw) {
             rincianBtn.style.display = 'block';
         }
     }
 
-    // =====================================================================
-    // ### MULAI PERUBAHAN: FUNGSI tampilkanRincianPerhitungan DIGANTI ###
-    // =====================================================================
     function tampilkanRincianPerhitungan() {
         if (!dataUntukRincian || isNaN(dataUntukRincian.bebanMw)) {
-            alert("Data untuk rincian tidak valid. Jalankan perhitungan terlebih dahulu.");
+            showToast("Data untuk rincian tidak valid. Jalankan perhitungan terlebih dahulu.", false);
             return;
         }
 
@@ -738,7 +804,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const data = dataUntukRincian;
 
-        // Perhitungan
         const energiListrik_kkal = data.bebanMw * 860000;
         const energiPanasInput_kkal = energiListrik_kkal / data.efisiensi;
         const massaBatuBaraBaseline_kg_jam = energiPanasInput_kkal / data.kalorBatubara;
@@ -754,24 +819,25 @@ document.addEventListener('DOMContentLoaded', function () {
         const penguranganCo2_ton_thn = ((emisiBaseline_kg_jam - emisiCofiring_kg_jam) * data.jamOperasi) / 1000;
         const totalMassaCo_jam = massaBiomassa_kg_jam + massaBatubaraCofiring_kg_jam;
         const persenMassaBiomassa = totalMassaCo_jam > 0 ? (massaBiomassa_kg_jam / totalMassaCo_jam) * 100 : 0;
+        
+        const emisiSO2_kg_jam = (massaBatubaraCofiring_kg_jam * data.sulfurBatubara * 2) + (massaBiomassa_kg_jam * data.sulfurBiomassa * 2);
+        const emisiSO2_baseline_kg_jam = massaBatuBaraBaseline_kg_jam * data.sulfurBatubara * 2;
+        const penguranganSO2_kg_jam = emisiSO2_baseline_kg_jam - emisiSO2_kg_jam;
 
-        // Fungsi untuk mengisi teks dengan aman
+
         const setText = (id, value) => {
             const el = document.getElementById(id);
             if (el) el.innerText = value;
         };
 
-        // Mengisi data ke Modal
         setText('rincian-modal-title', `Rincian Perhitungan (untuk Beban ${data.bebanMw} MW)`);
 
-        // Bagian 1
         setText('detail-beban-1', data.bebanMw);
         setText('detail-energi-listrik', formatAngka(energiListrik_kkal, 0));
         setText('detail-energi-listrik-2', formatAngka(energiListrik_kkal, 0));
         setText('detail-efisiensi', data.efisiensi * 100);
         setText('detail-energi-panas', formatAngka(energiPanasInput_kkal, 0));
 
-        // Bagian 2
         setText('detail-energi-panas-2', formatAngka(energiPanasInput_kkal, 0));
         setText('detail-kalor-bb-1', formatAngka(data.kalorBatubara, 0));
         setText('detail-baseline-massa', formatAngka(massaBatuBaraBaseline_kg_jam));
@@ -781,8 +847,8 @@ document.addEventListener('DOMContentLoaded', function () {
         setText('detail-baseline-biaya', formatRupiah(biayaBaseline_jam));
         setText('detail-karbon-bb-1', data.karbonBatubara * 100);
         setText('detail-baseline-emisi', formatAngka(emisiBaseline_kg_jam));
+        setText('detail-baseline-emisi-so2', formatAngka(emisiSO2_baseline_kg_jam));
 
-        // Bagian 3
         setText('detail-persen-cofiring-1', data.persenCoFiring * 100);
         setText('detail-persen-cofiring-2', data.persenCoFiring * 100);
         setText('detail-energi-panas-3', formatAngka(energiPanasInput_kkal, 0));
@@ -800,19 +866,16 @@ document.addEventListener('DOMContentLoaded', function () {
         setText('detail-co-massa-bb-2', formatAngka(massaBatubaraCofiring_kg_jam));
         setText('detail-karbon-bb-2', data.karbonBatubara * 100);
         setText('detail-co-emisi', formatAngka(emisiCofiring_kg_jam));
+        setText('detail-co-emisi-so2', formatAngka(emisiSO2_kg_jam));
 
-        // Bagian 4
         setText('detail-final-kebutuhan-bio', `${formatAngka(kebutuhanBiomassa_ton_thn)} ton/tahun`);
         setText('detail-final-pengurangan-co2', `${formatAngka(penguranganCo2_ton_thn)} ton CO2/tahun`);
+        setText('detail-final-pengurangan-so2', `${formatAngka(penguranganSO2_kg_jam)} kg SO2/jam`);
         setText('detail-final-persen-energi', formatAngka(data.persenCoFiring * 100, 2));
         setText('detail-final-persen-massa', formatAngka(persenMassaBiomassa, 2));
         
-        // Buka Modal yang benar (yang ada di index.html)
         openModal(document.getElementById('rincianPerhitunganModal'));
     }
-    // =====================================================================
-    // ### AKHIR PERUBAHAN ###
-    // =====================================================================
     
     function setupReferensiListeners() {
         const tambahDokumenBtn = document.getElementById('tambah-dokumen-btn');
@@ -843,8 +906,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     saveDokumen();
                     renderTabelDokumen();
                     closeModal(document.getElementById('tambahDokumenModal'));
+                    showToast('Dokumen berhasil ditambahkan.');
                 } else {
-                    alert('Silakan pilih file terlebih dahulu.');
+                    showToast('Silakan pilih file terlebih dahulu.', false);
                 }
             });
         }
@@ -861,21 +925,23 @@ document.addEventListener('DOMContentLoaded', function () {
                     saveCatatan();
                     renderCatatan();
                     textarea.value = '';
+                    showToast('Catatan berhasil disimpan.');
                 }
             });
         }
 
         if (tabelDokumenBody) {
              tabelDokumenBody.addEventListener('click', function(e){
-                if(e.target.closest('.btn-delete')){
-                    const index = e.target.closest('.btn-delete').dataset.index;
-                    if(confirm(`Yakin ingin menghapus dokumen "${dokumenTerkait[index].namaFile}"?`)){
-                        dokumenTerkait.splice(index, 1);
-                        saveDokumen();
-                        renderTabelDokumen();
-                    }
-                }
-            });
+                 if(e.target.closest('.btn-delete')){
+                     const index = e.target.closest('.btn-delete').dataset.index;
+                     if(confirm(`Yakin ingin menghapus dokumen "${dokumenTerkait[index].namaFile}"?`)){
+                         dokumenTerkait.splice(index, 1);
+                         saveDokumen();
+                         renderTabelDokumen();
+                         showToast('Dokumen berhasil dihapus.');
+                     }
+                 }
+             });
         }
 
         renderTabelDokumen();
@@ -914,18 +980,48 @@ document.addEventListener('DOMContentLoaded', function () {
             container.innerHTML = '<p style="text-align:center; color:#64748b;">Belum ada catatan.</p>';
             return;
         }
-        [...catatanReferensi].reverse().forEach(catatan => {
+        [...catatanReferensi].reverse().forEach((catatan, index) => {
             const noteElement = document.createElement('div');
             noteElement.classList.add('catatan-item');
             const formattedDate = new Date(catatan.timestamp).toLocaleString('id-ID', {dateStyle: 'full', timeStyle: 'short'});
             noteElement.innerHTML = `
                 <p class="catatan-teks">${catatan.teks.replace(/\n/g, '<br>')}</p>
                 <p class="catatan-tanggal">Dicatat pada: ${formattedDate}</p>
+                <div class="catatan-actions">
+                    <button class="btn-edit-note" data-index="${catatanReferensi.length - 1 - index}"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn-delete-note" data-index="${catatanReferensi.length - 1 - index}"><i class="fas fa-trash"></i> Hapus</button>
+                </div>
             `;
             container.appendChild(noteElement);
         });
-    }
+        
+        container.querySelectorAll('.btn-delete-note').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = e.target.dataset.index;
+                if(confirm('Yakin ingin menghapus catatan ini?')) {
+                    catatanReferensi.splice(index, 1);
+                    saveCatatan();
+                    renderCatatan();
+                    showToast('Catatan berhasil dihapus.');
+                }
+            });
+        });
 
+        container.querySelectorAll('.btn-edit-note').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = e.target.dataset.index;
+                const newTeks = prompt('Edit catatan:', catatanReferensi[index].teks);
+                if(newTeks !== null && newTeks.trim() !== '') {
+                    catatanReferensi[index].teks = newTeks.trim();
+                    catatanReferensi[index].timestamp = new Date().toISOString();
+                    saveCatatan();
+                    renderCatatan();
+                    showToast('Catatan berhasil diperbarui.');
+                }
+            });
+        });
+    }
+    
 
     // --- NAVIGASI UTAMA ---
     function navigateTo(pageName, addToHistory = true) {
@@ -1209,7 +1305,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                         <button class="maintenance-btn category-btn" data-category="lifting"><i class="fas fa-crane"></i> Peralatan Angkat</button>
                                     </div>
                                     <div id="category-content-display" class="equipment-content-display" style="margin-top:20px;">
-                                        <p style="text-align:center; color:#64748b;">Pilih kategori di atas untuk melihat daftar peralatan.</p>
+                                         <p style="text-align:center; color:#64748b;">Pilih kategori di atas untuk melihat daftar peralatan.</p>
                                     </div>
                                 `;
                                 document.querySelectorAll('.category-btn').forEach(catButton => {
@@ -1240,20 +1336,13 @@ document.addEventListener('DOMContentLoaded', function () {
         else if (pageName === 'TOOLS') {
             contentBody.innerHTML = `<p>Konten untuk halaman <strong>${pageName}</strong> sedang dalam pengembangan.</p>`;
         }
-        else if (pageName === 'REFERENSI DAN DATABASE') {
-            // Logika ini akan mengarahkan ke halaman RE, lalu mengklik tab yang benar
-            navigateTo('RENEWABLE ENERGY'); 
-            setTimeout(() => {
-                const refButton = document.querySelector('.submenu-btn[data-target="referensi-content"]');
-                if (refButton) refButton.click();
-            }, 0);
-        }
         else if (pageName === 'RENEWABLE ENERGY') {
             contentBody.innerHTML = `
                 <div class="submenu-bar">
                     <button class="submenu-btn active" data-target="smart-cofiring-content"><i class="fas fa-cogs"></i> Smart Co-firing</button>
                     <button class="submenu-btn" data-target="referensi-content"><i class="fas fa-book-open"></i> Referensi & Database</button>
                     <button class="submenu-btn" data-target="dokumen-content"><i class="fas fa-file-pdf"></i> Dokumen Pendukung</button>
+                    <button class="submenu-btn" data-action="load-dummy-data"><i class="fas fa-database"></i> Dummy Data</button>
                 </div>
 
                 <div id="smart-cofiring-content" class="re-content-section">
@@ -1293,36 +1382,93 @@ document.addEventListener('DOMContentLoaded', function () {
                             <h3>2. Data Bahan Bakar & Ekonomi</h3>
                             <div class="parameter-grid-bahan-bakar">
                                  <div class="input-group">
-                                    <label for="jenis-batubara">Jenis Batu Bara</label>
-                                    <select id="jenis-batubara"></select>
-                                </div>
+                                     <label for="jenis-batubara">Jenis Batu Bara</label>
+                                     <select id="jenis-batubara"></select>
+                                 </div>
                                  <div class="input-group">
-                                    <label for="kalorBatubara">Nilai Kalor (kkal/kg)</label>
-                                    <input type="number" id="kalorBatubara" required>
-                                </div>
-                                <div class="input-group">
-                                    <label for="hargaBatubara">Harga (Rp/ton)</label>
-                                    <input type="number" id="hargaBatubara" required>
-                                </div>
-                                <div class="input-group">
-                                    <label for="karbonBatubara">Kandungan Karbon (%)</label>
-                                    <input type="number" step="0.1" id="karbonBatubara" required>
-                                </div>
+                                     <label for="kalorBatubara">
+                                         Nilai Kalor (kkal/kg)
+                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Nilai kalor bahan bakar (Higher Heating Value).</span></span>
+                                     </label>
+                                     <input type="number" id="kalorBatubara" required>
+                                 </div>
+                                 <div class="input-group">
+                                     <label for="hargaBatubara">
+                                         Harga (Rp/ton)
+                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Harga bahan bakar per ton.</span></span>
+                                     </label>
+                                     <input type="number" id="hargaBatubara" required>
+                                 </div>
+                                 <div class="input-group">
+                                     <label for="karbonBatubara">
+                                         Kandungan Karbon (%)
+                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kandungan karbon (C) dalam bahan bakar, untuk menghitung emisi CO2.</span></span>
+                                     </label>
+                                     <input type="number" step="0.1" id="karbonBatubara" required>
+                                 </div>
+                                 <div class="input-group">
+                                     <label for="moistureBatubara">
+                                         Moisture (%)
+                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar air dalam bahan bakar. Mempengaruhi nilai kalor bersih.</span></span>
+                                     </label>
+                                     <input type="number" step="0.1" id="moistureBatubara" required>
+                                 </div>
+                                 <div class="input-group">
+                                     <label for="ashBatubara">
+                                         Ash Content (%)
+                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar abu dalam bahan bakar. Mempengaruhi nilai kalor dan potensi fouling.</span></span>
+                                     </label>
+                                     <input type="number" step="0.1" id="ashBatubara" required>
+                                 </div>
+                                 <div class="input-group">
+                                     <label for="sulfurBatubara">
+                                         Sulfur Content (%)
+                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar belerang (S) dalam bahan bakar. Untuk menghitung emisi SO2.</span></span>
+                                     </label>
+                                     <input type="number" step="0.01" id="sulfurBatubara" required>
+                                 </div>
                             </div>
                             <hr class="pemisah-bahan-bakar">
                             <div class="parameter-grid-bahan-bakar">
                                  <div class="input-group">
-                                    <label for="jenis-biomassa">Jenis Biomassa</label>
-                                    <select id="jenis-biomassa"></select>
-                                </div>
-                                <div class="input-group">
-                                    <label for="kalorBiomassa">Nilai Kalor (kkal/kg)</label>
-                                    <input type="number" id="kalorBiomassa" required>
-                                </div>
-                                <div class="input-group">
-                                    <label for="hargaBiomassa">Harga (Rp/ton)</label>
-                                    <input type="number" id="hargaBiomassa" required>
-                                </div>
+                                     <label for="jenis-biomassa">Jenis Biomassa</label>
+                                     <select id="jenis-biomassa"></select>
+                                 </div>
+                                 <div class="input-group">
+                                     <label for="kalorBiomassa">
+                                         Nilai Kalor (kkal/kg)
+                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Nilai kalor bahan bakar (Higher Heating Value).</span></span>
+                                     </label>
+                                     <input type="number" id="kalorBiomassa" required>
+                                 </div>
+                                 <div class="input-group">
+                                     <label for="hargaBiomassa">
+                                         Harga (Rp/ton)
+                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Harga bahan bakar per ton.</span></span>
+                                     </label>
+                                     <input type="number" id="hargaBiomassa" required>
+                                 </div>
+                                 <div class="input-group">
+                                     <label for="moistureBiomassa">
+                                         Moisture (%)
+                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar air dalam bahan bakar. Mempengaruhi nilai kalor bersih.</span></span>
+                                     </label>
+                                     <input type="number" step="0.1" id="moistureBiomassa" required>
+                                 </div>
+                                 <div class="input-group">
+                                     <label for="ashBiomassa">
+                                         Ash Content (%)
+                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar abu dalam bahan bakar. Mempengaruhi nilai kalor dan potensi fouling.</span></span>
+                                     </label>
+                                     <input type="number" step="0.1" id="ashBiomassa" required>
+                                 </div>
+                                  <div class="input-group">
+                                     <label for="sulfurBiomassa">
+                                         Sulfur Content (%)
+                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar belerang (S) dalam bahan bakar. Untuk menghitung emisi SO2.</span></span>
+                                     </label>
+                                     <input type="number" step="0.01" id="sulfurBiomassa" required>
+                                 </div>
                             </div>
                         </div>
 
@@ -1348,6 +1494,10 @@ document.addEventListener('DOMContentLoaded', function () {
                             <div class="hasil-item highlight">
                                 <p>Pengurangan Emisi CO2 Tahunan</p>
                                 <span id="totalPenguranganCo2">0</span> ton CO2/tahun
+                            </div>
+                            <div class="hasil-item highlight">
+                                <p>Pengurangan Emisi SO2 Tahunan</p>
+                                <span id="totalPenguranganSO2">0</span> ton SO2/tahun
                             </div>
                             <div class="hasil-item">
                                 <p>Total Biaya (Baseline)</p>
@@ -1383,6 +1533,10 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <h4>3. Emisi CO2 dari Batu Bara (kg/jam)</h4>
                                 <p class="rumus-formula">Emisi CO2 = Massa Batu Bara × % Karbon × (44 / 12)</p>
                             </div>
+                             <div class="rumus-box">
+                                <h4>4. Emisi SO2 dari Bahan Bakar (kg/jam)</h4>
+                                <p class="rumus-formula">Emisi SO2 = Massa Bahan Bakar × % Sulfur × 2</p>
+                            </div>
                         </div>
                          <div class="referensi-section">
                             <h3><i class="fas fa-sticky-note"></i> Catatan & Log Perubahan</h3>
@@ -1390,7 +1544,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <textarea id="catatan-baru-textarea" class="notepad-textarea" placeholder="Tulis catatan baru di sini..."></textarea>
                             <button id="simpan-catatan-btn" class="btn-success" style="margin-top:10px;"><i class="fas fa-save"></i> Simpan Catatan Baru</button>
                         </div>
-                    </div>
+                     </div>
                 </div>
 
                 <div id="dokumen-content" class="re-content-section" style="display:none;">
@@ -1459,13 +1613,13 @@ document.addEventListener('DOMContentLoaded', function () {
             case 'add-employee': openEmployeeForm(); break;
             case 'edit-employee': openEmployeeForm(employees.find(e => e.nid === nid)); break;
             case 'delete-employee':
-                if (confirm(`Yakin ingin menghapus karyawan dengan NID ${nid}?`)) { employees = employees.filter(e => e.nid !== nid); saveEmployees(); navigateTo('HUMAN RESOURCE PERFORMANCE'); }
+                if (confirm(`Yakin ingin menghapus karyawan dengan NID ${nid}?`)) { employees = employees.filter(e => e.nid !== nid); saveEmployees(); navigateTo('HUMAN RESOURCE PERFORMANCE'); showToast("Karyawan berhasil dihapus."); }
                 break;
             case 'delete-all':
                 if (confirm("Lanjutkan menghapus semua daftar karyawan?")) {
                     employees = [];
                     saveEmployees();
-                    alert("Semua data karyawan berhasil dihapus.");
+                    showToast("Semua data karyawan berhasil dihapus.");
                     const tableWrapper = document.getElementById('employee-table-wrapper');
                     if (tableWrapper) {
                         tableWrapper.innerHTML = '';
@@ -1478,6 +1632,10 @@ document.addEventListener('DOMContentLoaded', function () {
             case 'download-template': downloadExcelTemplate(); break;
             case 'open-schedule-manager': openShiftScheduleManager(); break;
             case 'toggle-notepad': toggleNotepad(); break;
+            case 'load-dummy-data':
+                loadDummyData();
+                navigateTo(currentPageName);
+                break;
         }
     });
 
@@ -1490,13 +1648,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const saveScheduleBtn = document.getElementById('save-schedule-btn');
-    if (saveScheduleBtn) { saveScheduleBtn.addEventListener('click', () => { document.querySelectorAll('.schedule-select').forEach(select => { const { date, regu } = select.dataset; if (!monthlySchedule[date]) monthlySchedule[date] = {}; monthlySchedule[date][regu] = select.value; }); saveSchedule(); alert('Jadwal berhasil disimpan!'); closeModal(shiftScheduleModal); }); }
+    if (saveScheduleBtn) { saveScheduleBtn.addEventListener('click', () => { document.querySelectorAll('.schedule-select').forEach(select => { const { date, regu } = select.dataset; if (!monthlySchedule[date]) monthlySchedule[date] = {}; monthlySchedule[date][regu] = select.value; }); saveSchedule(); showToast('Jadwal berhasil disimpan!'); closeModal(shiftScheduleModal); }); }
 
     const openShiftTimesBtn = document.getElementById('open-shift-times-btn');
     if (openShiftTimesBtn) { openShiftTimesBtn.addEventListener('click', openShiftTimesManager); }
 
     const shiftTimesForm = document.getElementById('shift-times-form');
-    if (shiftTimesForm) { shiftTimesForm.addEventListener('submit', (e) => { e.preventDefault(); ['Pagi', 'Sore', 'Malam', 'Daytime'].forEach(shift => { const name = shift.toLowerCase(); shiftRules[shift].start = { hour: parseInt(document.getElementById(`${name}-start-hour`).value), minute: parseInt(document.getElementById(`${name}-start-minute`).value) }; shiftRules[shift].end = { hour: parseInt(document.getElementById(`${name}-end-hour`).value), minute: parseInt(document.getElementById(`${name}-end-minute`).value) }; }); saveShiftRules(); alert('Jam kerja berhasil disimpan!'); closeModal(shiftTimesModal); }); }
+    if (shiftTimesForm) { shiftTimesForm.addEventListener('submit', (e) => { e.preventDefault(); ['Pagi', 'Sore', 'Malam', 'Daytime'].forEach(shift => { const name = shift.toLowerCase(); shiftRules[shift].start = { hour: parseInt(document.getElementById(`${name}-start-hour`).value), minute: parseInt(document.getElementById(`${name}-start-minute`).value) }; shiftRules[shift].end = { hour: parseInt(document.getElementById(`${name}-end-hour`).value), minute: parseInt(document.getElementById(`${name}-end-minute`).value) }; }); saveShiftRules(); showToast('Jam kerja berhasil disimpan!'); closeModal(shiftTimesModal); }); }
 
     if (downloadRecapBtn) downloadRecapBtn.addEventListener('click', downloadRecapExcel);
     if (clearRecapBtn) clearRecapBtn.addEventListener('click', clearRecapData);
@@ -1511,6 +1669,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 navigateTo(currentPageName, false);
                 icon.classList.remove('icon-spin');
                 refreshBtn.disabled = false;
+                showToast("Data berhasil diperbarui.");
             }, 1000);
         });
     }
@@ -1518,10 +1677,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (employeeForm) employeeForm.addEventListener('submit', handleEmployeeFormSubmit);
     if (scanButton) scanButton.addEventListener('click', processScan);
     if (nidScannerInput) nidScannerInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') processScan(); });
-    if (monitoringFooter) monitoringFooter.addEventListener('click', (e) => { const editButton = e.target.closest('.k3-edit-btn'); if (editButton) { const targetId = editButton.dataset.target; const pElement = document.getElementById(targetId); const newValue = prompt(`Masukkan nilai baru untuk "${pElement.previousElementSibling.textContent}":`, pElement.textContent); if (newValue !== null && newValue.trim() !== "") { pElement.textContent = newValue.trim().toUpperCase(); saveK3Stats(); } } });
+    if (monitoringFooter) monitoringFooter.addEventListener('click', (e) => { const editButton = e.target.closest('.k3-edit-btn'); if (editButton) { const targetId = editButton.dataset.target; const pElement = document.getElementById(targetId); const newValue = prompt(`Masukkan nilai baru untuk "${pElement.previousElementSibling.textContent}":`, pElement.textContent); if (newValue !== null && newValue.trim() !== "") { pElement.textContent = newValue.trim().toUpperCase(); saveK3Stats(); showToast("Statistik K3 berhasil diperbarui."); } } });
 
     const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) { logoutBtn.addEventListener('click', () => { sessionStorage.clear(); alert("Anda telah berhasil logout."); window.location.href = 'login.html'; }); }
+    if (logoutBtn) { logoutBtn.addEventListener('click', () => { sessionStorage.clear(); showToast("Anda telah berhasil logout."); window.location.href = 'login.html'; }); }
 
     // INISIALISASI APLIKASI
     loadData();
