@@ -20,31 +20,41 @@
                     <li><a href="#" class="active" data-page="DASHBOARD"><i class="fas fa-home"></i> DASHBOARD</a></li>
                     <li><a href="#" data-page="POWER PLANT PERFORMANCE"><i class="fas fa-industry"></i> POWER PLANT PERFORMANCE</a></li>
                     <li><a href="#" data-page="HUMAN RESOURCE PERFORMANCE"><i class="fas fa-users"></i> HUMAN RESOURCE PERFORMANCE</a></li>
-                    <li><a href="#" data-page="EQUIPMENT DATA"><i class="fas fa-cogs"></i> EQUIPMENT DATA</a></li>
-                    <li><a href="#" data-page="RENEWABLE ENERGY"><i class="fas fa-solar-panel"></i> RENEWABLE ENERGY</a></li>
-                    <li><a href="#" data-page="CSR"><i class="fas fa-hand-holding-heart"></i> CSR</a></li>
+                    <li><a href="#" data-page="EQUIPMENT MANAGEMENT"><i class="fas fa-cogs"></i> EQUIPMENT MANAGEMENT</a></li>
+                    <li><a href="#" data-page="WAREHOUSE & INVENTORY"><i class="fas fa-book"></i> WAREHOUSE & INVENTORY</a></li>
+                    <li><a href="#" data-page="TOOLS MANAGEMENT"><i class="fas fa-book"></i> TOOLS MANAGEMENT</a></li>
                     <li><a href="#" data-page="SOP & WORK INSTRUCTIONS"><i class="fas fa-book"></i> SOP & WORK INSTRUCTIONS</a></li>
+                     <li><a href="#" data-page="RENEWABLE ENERGY"><i class="fas fa-solar-panel"></i> RENEWABLE ENERGY</a></li>
+                     <li><a href="#" data-page="CSR"><i class="fas fa-hand-holding-heart"></i> CSR</a></li>
                 </ul>
-                 <button id="logout-btn" class="btn-delete" style="width: 85%; margin: 25px auto 0; display: block;">
+                <button id="logout-btn" class="btn-delete" style="width: 85%; margin: 25px auto 0; display: block;">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </button>
+                
+                <a href="#" id="edit-profile-btn" class="profile-link">
+                    <div class="profile-container">
+                        <img id="profile-picture" src="https://placehold.co/40x40/cccccc/333?text=A" alt="Foto Profil">
+                        <span id="profile-name">Nama Akun</span>
+                    </div>
+                </a>
             </nav>
         </aside>
         <main class="main-content">
-			<div class="content-header">
-				<div class="header-left">
-					<div class="nav-buttons">
-						<button id="nav-back-btn" class="btn-nav" title="Kembali"><i class="fas fa-arrow-left"></i></button>
-						<button id="nav-forward-btn" class="btn-nav" title="Maju"><i class="fas fa-arrow-right"></i></button>
-					</div>
-					<h2 id="page-title">Dashboard</h2>
-				</div>
-				<div class="header-actions">
-					<button id="refresh-btn" class="btn-secondary" title="Refresh Data">
-						<i class="fas fa-sync-alt"></i> Refresh
-					</button>
-				</div>
-			</div>
+            <div class="content-header">
+                <div class="header-left">
+                    <div class="nav-buttons">
+                        <button id="nav-back-btn" class="btn-nav" title="Kembali"><i class="fas fa-arrow-left"></i></button>
+                        <button id="nav-forward-btn" class="btn-nav" title="Maju"><i class="fas fa-arrow-right"></i></button>
+                    </div>
+                    <h2 id="page-title">Dashboard</h2>
+                </div>
+                <div class="header-actions">
+                    <button id="refresh-btn" class="btn-secondary" title="Refresh Data">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
             <div class="content-body" id="content-body">
             </div>
         </main>
@@ -259,6 +269,32 @@
         </div>
     </div>
     
+    <div id="editProfileModal" class="modal">
+        <div class="modal-content form-modal" style="max-width: 700px; color: #333;">
+            <span class="close-button">&times;</span>
+            <h3>Edit Profil</h3>
+            <form id="edit-profile-form">
+                <div class="profile-picture-section">
+                    <img id="profile-pic-preview" src="https://placehold.co/100x100/cccccc/333?text=A" alt="Preview Foto">
+                    <div class="picture-buttons">
+                        <input type="file" id="new-profile-pic-input" accept="image/*" style="display: none;">
+                        <button type="button" id="upload-pic-btn" class="btn-secondary">Upload new picture</button>
+                        <button type="button" id="delete-pic-btn" class="btn-delete-outline">Delete</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="form-edit-name">Name</label>
+                    <input type="text" id="form-edit-name" required>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" id="save-profile-btn">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="toast-notification" class="toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -266,8 +302,115 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <script src="script.js"></script>
+
+<div id="tambahDokumenModal" class="modal">
+        <div class="modal-content form-modal">
+            <span class="close-button">&times;</span>
+            <h3 id="form-title">Tambah Dokumen Referensi</h3>
+            <form id="dokumen-form">
+                <div class="form-group">
+                    <label for="form-dokumen-deskripsi">Deskripsi Dokumen</label>
+                    <input type="text" id="form-dokumen-deskripsi" placeholder="Contoh: SOP Start-Stop Unit" required>
+                </div>
+                <div class="form-group">
+                    <label for="form-dokumen-file">Pilih File (PDF, Word, Excel)</label>
+                    <input type="file" id="form-dokumen-file" required>
+                    <p style="font-size: 12px; opacity: 0.7; margin-top: 5px;">Penting: Pastikan file ini sudah ada di dalam folder "dokumen" proyek Anda.</p>
+                </div>
+                <button type="submit" id="save-dokumen-button">Simpan Dokumen</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-notification" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="script.js"></script>
+    <div id="rincianPerhitunganModal" class="modal modal-xl">
+        <div class="modal-content">
+            <div class="monitoring-header">
+                <h3 id="rincian-modal-title">Rincian Perhitungan</h3>
+                <span class="close-button">&times;</span>
+            </div>
+            <div class="rincian-body">
+                <div class="rincian-section">
+                    <h4>1. Kebutuhan Energi Panas per Jam</h4>
+                    <div class="calc-step">
+                        <p>Energi Listrik per Jam (Output)</p>
+                        <span class="calc-formula"><span id="detail-beban-1">0</span> MW &times; 860.000 kkal/MWe = <span class="calc-result" id="detail-energi-listrik">0</span> kkal</span>
+                    </div>
+                    <div class="calc-step">
+                        <p>Energi Panas per Jam (Input)</p>
+                        <span class="calc-formula"><span id="detail-energi-listrik-2">0</span> kkal / <span id="detail-efisiensi">0</span>% Efisiensi = <span class="calc-result" id="detail-energi-panas">0</span> kkal</span>
+                    </div>
+                </div>
+
+                <div class="rincian-grid">
+                    <div class="rincian-section">
+                        <h4>2. Skenario Baseline (100% Batu Bara)</h4>
+                        <div class="calc-step">
+                            <p>Kebutuhan Batu Bara / Jam</p>
+                            <span class="calc-formula"><span id="detail-energi-panas-2">0</span> / <span id="detail-kalor-bb-1">0</span> = <span class="calc-result" id="detail-baseline-massa">0</span> kg/jam</span>
+                        </div>
+                        <div class="calc-step">
+                            <p>Biaya / Jam</p>
+                            <span class="calc-formula">(<span id="detail-baseline-massa-2">0</span>/1000) * <span id="detail-harga-bb">0</span> = <span class="calc-result" id="detail-baseline-biaya">Rp 0</span></span>
+                        </div>
+                        <div class="calc-step">
+                            <p>Emisi CO2 / Jam</p>
+                            <span class="calc-formula"><span id="detail-baseline-massa-3">0</span> * <span id="detail-karbon-bb-1">0</span>% * (44/12) = <span class="calc-result" id="detail-baseline-emisi">0</span> kg CO2/jam</span>
+                        </div>
+                    </div>
+                    <div class="rincian-section">
+                        <h4>3. Skenario Co-firing (<span id="detail-persen-cofiring-1">0</span>% Biomassa)</h4>
+                        <div class="calc-step">
+                            <p>Energi dari Biomassa</p>
+                            <span class="calc-formula"><span id="detail-persen-cofiring-2">0</span>% &times; <span id="detail-energi-panas-3">0</span> = <span class="calc-result" id="detail-co-energi-bio">0</span> kkal</span>
+                        </div>
+                        <div class="calc-step">
+                            <p>Energi dari Batu Bara</p>
+                            <span class="calc-formula"><span id="detail-persen-bb">0</span>% &times; <span id="detail-energi-panas-4">0</span> = <span class="calc-result" id="detail-co-energi-bb">0</span> kkal</span>
+                        </div>
+                        <div class="calc-step">
+                            <p>Massa Biomassa / Jam</p>
+                            <span class="calc-formula"><span id="detail-co-energi-bio-2">0</span> / <span id="detail-kalor-bio">0</span> = <span class="calc-result" id="detail-co-massa-bio">0</span> kg/jam</span>
+                        </div>
+                        <div class="calc-step">
+                            <p>Massa Batu Bara / Jam</p>
+                            <span class="calc-formula"><span id="detail-co-energi-bb-2">0</span> / <span id="detail-kalor-bb-2">0</span> = <span class="calc-result" id="detail-co-massa-bb">0</span> kg/jam</span>
+                        </div>
+                        <div class="calc-step">
+                            <p>Biaya / Jam (Total)</p>
+                            <span class="calc-result" id="detail-co-biaya-total">Rp 0</span>
+                        </div>
+                        <div class="calc-step">
+                            <p>Emisi CO2 / Jam</p>
+                            <span class="calc-formula"><span id="detail-co-massa-bb-2">0</span> * <span id="detail-karbon-bb-2">0</span>% * (44/12) = <span class="calc-result" id="detail-co-emisi">0</span> kg CO2/jam</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rincian-section final-results">
+                    <h4>4. Hasil Akhir (Ekstrapolasi Tahunan untuk Blok Ini)</h4>
+                    <div class="calc-step">
+                        <p>Kebutuhan Biomassa Tahunan</p>
+                        <span class="calc-result" id="detail-final-kebutuhan-bio">0 ton/tahun</span>
+                    </div>
+                    <div class="calc-step">
+                        <p>Pengurangan CO2 Tahunan</p>
+                        <span class="calc-result" id="detail-final-pengurangan-co2">0 ton CO2/tahun</span>
+                    </div>
+                    <div class="calc-step">
+                        <p>% Pemanfaatan Biomassa</p>
+                        <span class="calc-result"><span id="detail-final-persen-energi">0</span>% Energi / <span id="detail-final-persen-massa">0</span>% Massa</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
+
 
 <script>
 if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/')) {
