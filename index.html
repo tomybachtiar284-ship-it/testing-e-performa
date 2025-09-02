@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EnergiX</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="fix-style.css?v=8" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
         <aside class="sidebar">
             <div class="logo">
                 <img src="images/performalogo.png" onerror="this.src='https://placehold.co/180x60/0d2847/ffffff?text=PERFORMA';" alt="Logo PERFORMA" class="logo-img" />
-                <h1>"EnergiX</h1>
+                <h1>"EnergiX"</h1>
                 <p>“Smart Solution for Smarter Power/“Solusi Cerdas untuk Energi yang Lebih Cerdas.”</p>
             </div>
             <nav class="menu">
@@ -57,7 +57,109 @@
 
             <div class="content-body" id="content-body">
             </div>
+            
+            <div id="warehouse-content" style="display: none;">
+                <div class="action-bar-top">
+                    <button id="warehouse-back-btn" class="btn-secondary" style="display: none;"><i class="fas fa-arrow-left"></i> Kembali</button>
+                </div>
+                <div id="warehouse-main-menu">
+                    <div class="options-grid">
+                        <button class="option-btn" data-action="master-data"><i class="fas fa-database"></i> Master Data</button>
+                        <button class="option-btn" data-action="barang-masuk"><i class="fas fa-box-open"></i> Barang Masuk (Inbound)</button>
+                        <button class="option-btn" data-action="barang-keluar"><i class="fas fa-dolly"></i> Barang Keluar (Outbound)</button>
+                        <button class="option-btn" data-action="dashboard-monitoring"><i class="fas fa-chart-bar"></i> Dashboard & Monitoring</button>
+                        <button class="option-btn" data-action="mutasi-stok"><i class="fas fa-exchange-alt"></i> Transfer & Mutasi Stok</button>
+                        <button class="option-btn" data-action="laporan-ekspor"><i class="fas fa-file-export"></i> Laporan & Ekspor</button>
+                    </div>
+                </div>
+                <div id="warehouse-dynamic-content" class="content-display-box" style="display: none;">
+                    <div id="master-data-content" style="display: none;">
+                        <div class="action-bar-sub">
+                            <button class="btn-success" data-action="add-item"><i class="fas fa-plus"></i> Tambah Barang</button>
+                            <button class="btn-primary" data-action="import-items"><i class="fas fa-file-import"></i> Impor dari Excel</button>
+                            <input type="file" id="item-excel-importer" style="display:none" accept=".xlsx, .xls">
+                            <button class="btn-delete" data-action="delete-all-items"><i class="fas fa-trash-alt"></i> Hapus Semua Data</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Kode Barang</th>
+                                        <th>Nama Barang</th>
+                                        <th>Kategori</th>
+                                        <th>Satuan</th>
+                                        <th>Stok</th>
+                                        <th>Min. Stok</th>
+                                        <th>Supplier</th>
+                                        <th>Lokasi</th>
+                                        <th>Kadaluarsa</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="master-data-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
+    </div>
+
+    <div id="itemFormModal" class="modal">
+        <div class="modal-content form-modal">
+            <span class="close-button">&times;</span>
+            <h3 id="item-form-title">Tambah Barang Baru</h3>
+            <form id="item-form">
+                <input type="hidden" id="item-index">
+                <div class="form-group">
+                    <label for="item-code">Kode Barang</label>
+                    <div class="input-with-button">
+                        <input type="text" id="item-code" required>
+                        <button type="button" id="generate-code-btn" class="btn-secondary" title="Generate Kode Otomatis"><i class="fas fa-magic"></i></button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="item-name">Nama Barang</label>
+                    <input type="text" id="item-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="item-category">Kategori</label>
+                    <select id="item-category" required>
+                        <option value="">Pilih Kategori</option>
+                        <option value="Bahan Baku">Bahan Baku</option>
+                        <option value="Sparepart">Sparepart</option>
+                        <option value="Alat">Alat</option>
+                        <option value="Consumable">Consumable</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="item-unit">Satuan</label>
+                    <input type="text" id="item-unit" placeholder="pcs, liter, box, dll." required>
+                </div>
+                <div class="form-group">
+                    <label for="item-stock">Stok Awal</label>
+                    <input type="number" id="item-stock" required>
+                </div>
+                <div class="form-group">
+                    <label for="item-reorder">Reorder Point (Min. Stok)</label>
+                    <input type="number" id="item-reorder" required>
+                </div>
+                <div class="form-group">
+                    <label for="item-supplier">Supplier / Vendor Utama</label>
+                    <input type="text" id="item-supplier" required>
+                </div>
+                <div class="form-group">
+                    <label for="item-location">Lokasi Gudang</label>
+                    <input type="text" id="item-location" required>
+                </div>
+                <div class="form-group">
+                    <label for="item-expiry">Tanggal Kadaluarsa</label>
+                    <input type="date" id="item-expiry">
+                </div>
+                <button type="submit" id="save-item-button">Simpan Barang</button>
+            </form>
+        </div>
     </div>
 
     <div id="employeeFormModal" class="modal">
@@ -296,6 +398,14 @@
     </div>
 
     <div id="toast-notification" class="toast"></div>
+    <div id="itemDetailModal" class="modal">
+        <div class="modal-content form-modal" style="max-width: 800px; color: #333;">
+            <span class="close-button close-button-modal">&times;</span>
+            <h3 id="item-detail-title">Detail Barang</h3>
+            <div id="item-detail-content">
+                </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -303,7 +413,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <script src="script.js"></script>
 
-<div id="tambahDokumenModal" class="modal">
+    <div id="tambahDokumenModal" class="modal">
         <div class="modal-content form-modal">
             <span class="close-button">&times;</span>
             <h3 id="form-title">Tambah Dokumen Referensi</h3>
@@ -419,10 +529,3 @@
 </body>
 </html>
 <script>
-if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/')) {
-    if (sessionStorage.getItem('statusLogin') !== 'true') {
-        window.location.href = 'login.html';
-    }
-}
-</script>
-
