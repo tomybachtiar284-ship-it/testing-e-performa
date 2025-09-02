@@ -1430,3 +1430,152 @@ body {
     color: white;
     border: none;
 }
+/* Gaya untuk sub-menu Master Data */
+.action-bar-sub {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #eef2f7;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.table-container {
+    overflow-x: auto;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+}
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.data-table th, .data-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+}
+.data-table th {
+    background-color: #f1f5f9;
+    color: #475569;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+.data-table tr:hover td {
+    background-color: #f8fafc;
+}
+.data-table .actions {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.data-table .btn-edit, .data-table .btn-delete {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+/* Modal Form untuk Barang */
+#itemFormModal .modal-content {
+    max-width: 500px;
+}
+#save-item-button {
+    background-color: #22c55e;
+}
+/* Perubahan pada Modal Detail Barang */
+#itemDetailModal .modal-content {
+    background-color: #1a3b5d; /* Warna latar belakang modal yang lebih gelap */
+    color: #ffffff; /* Warna teks utama menjadi putih */
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+}
+
+#item-detail-title {
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #3b82f6; /* Garis bawah biru untuk judul */
+    padding-bottom: 10px;
+}
+
+.detail-section h4 {
+    color: #4ade80; /* Warna hijau cerah untuk sub-judul */
+    font-size: 18px;
+    margin-top: 25px;
+    margin-bottom: 10px;
+}
+
+.detail-section p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #e0e0e0; /* Perbaikan: Mengatur warna teks data menjadi lebih terang */
+}
+
+.detail-section strong {
+    color: #a9c1d9; /* Perbaikan: Mengatur warna label menjadi abu-abu terang */
+    display: inline-block;
+    min-width: 150px; /* Jarak yang konsisten antar label */
+}
+
+/* Gaya untuk tabel di dalam modal detail */
+#itemDetailModal .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+#itemDetailModal .data-table th,
+#itemDetailModal .data-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(238, 235, 235, 0.937); /* Garis pemisah yang lebih halus */
+    font-size: 13px;
+    color: #e0e0e0;
+}
+
+#itemDetailModal .data-table th {
+    background-color: rgba(255, 255, 255, 0.05); /* Latar belakang header tabel */
+    color: #a9c1d9;
+    text-transform: uppercase;
+}
+
+#itemDetailModal .data-table tr:hover td {
+    background-color: rgba(255, 255, 255, 0.03); /* Efek hover ringan */
+}
+
+#item-detail-content .log-table-wrapper > p {
+    color: #a9c1d9 !important;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+/* Gaya untuk tombol close (X) pada modal */
+.modal-content .close-button {
+    color: #ffffff; /* Mengubah warna ikon X menjadi putih terang */
+    opacity: 1; /* Memastikan opacity penuh agar tidak transparan */
+    font-size: 30px; /* Membuat ukuran X sedikit lebih besar */
+    font-weight: bold; /* Membuat X lebih tebal */
+    text-shadow: none;
+    position: absolute; /* Memungkinkan penempatan yang akurat */
+    right: 20px; /* Jarak dari sisi kanan */
+    top: 15px; /* Jarak dari sisi atas */
+    cursor: pointer;
+}
+
+.modal-content .close-button:hover,
+.modal-content .close-button:focus {
+    color: #4ade80; /* Mengubah warna X saat di-hover/fokus */
+    opacity: 0.8;
+}
+.input-with-button {
+    display: flex;
+    gap: 8px;
+}
+.input-with-button input {
+    flex: 1;
+}
