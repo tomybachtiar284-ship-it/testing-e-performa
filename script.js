@@ -2,6 +2,13 @@
 //         KODE SCRIPT.JS (FINAL & LENGKAP)
 // ===============================================
 document.addEventListener('DOMContentLoaded', function () {
+    // --- CEK STATUS LOGIN SAAT APLIKASI DIMULAI ---
+    if (sessionStorage.getItem('statusLogin') !== 'true') {
+        // Jika tidak ada status login, arahkan ke halaman login
+        window.location.href = 'login.html';
+        return; // Hentikan eksekusi skrip
+    }
+
     Chart.register(ChartDataLabels);
 
     // --- ELEMEN DOM ---
@@ -42,6 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const navBackBtn = document.getElementById('nav-back-btn');
     const navForwardBtn = document.getElementById('nav-forward-btn');
     const toastNotification = document.getElementById('toast-notification');
+    const itemDetailModal = document.getElementById('itemDetailModal');
 
     // --- STATE APLIKASI ---
     let employees = [];
@@ -58,6 +66,14 @@ document.addEventListener('DOMContentLoaded', function () {
     let dataUntukRincian = {};
     let dokumenTerkait = [];
     let catatanReferensi = [];
+    
+    // --- STATE APLIKASI BARU UNTUK INVENTORI ---
+    let inventoryItems = [];
+    const inventoryCategories = ["Bahan Baku", "Sparepart", "Alat", "Consumable"];
+    let transactionLog = [];
+    const generateCodeBtn = document.getElementById('generate-code-btn');
+
+
     const lateSound = new Audio('sounds/terlambat.mp3');
     const scanSound = new Audio('sounds/masuk.mp3');
     const companyLogos = { "PT PLN NPS": "images/imagespln_nps.png", "PT MKP": "images/imagesmkp.png", "MKP IC": "images/imagesmkp_ic.png", "SECURITY": "images/scrt.png", "Visitor": "images/visitor.png" };
@@ -99,6 +115,12 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadDokumen() { dokumenTerkait = JSON.parse(localStorage.getItem('dokumenTerkait')) || []; }
     function saveCatatan() { localStorage.setItem('catatanReferensi', JSON.stringify(catatanReferensi)); }
     function loadCatatan() { catatanReferensi = JSON.parse(localStorage.getItem('catatanReferensi')) || []; }
+    
+    // --- FUNGSI MANAJEMEN DATA BARU UNTUK INVENTORI ---
+    function saveInventoryItems() { localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems)); }
+    function loadInventoryItems() { inventoryItems = JSON.parse(localStorage.getItem('inventoryItems')) || []; }
+    function saveTransactionLog() { localStorage.setItem('transactionLog', JSON.stringify(transactionLog)); }
+    function loadTransactionLog() { transactionLog = JSON.parse(localStorage.getItem('transactionLog')) || []; }
 
     function loadShiftRules() {
         try {
@@ -120,20 +142,23 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             employees = JSON.parse(localStorage.getItem('employees')) || [];
             recapLog = JSON.parse(localStorage.getItem('recapLog')) || [];
-            companies = JSON.parse(localStorage.getItem('companies')) || ["PT PLN NPS", "PT MKP", "PT MKP IC", "Security", "Visitor"];
+            companies = JSON.parse(localStorage.getItem('companies')) || ["PT PLN NPS", "PT MKP", "MKP IC", "SECURITY", "Visitor"];
             monitoringLog = JSON.parse(localStorage.getItem('monitoringLog')) || [];
             monthlySchedule = JSON.parse(localStorage.getItem('monthlySchedule')) || {};
         } catch (e) {
             console.error("Gagal memuat data:", e);
-            employees = []; recapLog = []; companies = ["PT PLN NPS", "PT MKP", "PT MKP IC", "Security", "Visitor"]; monitoringLog = []; monthlySchedule = {};
+            employees = []; recapLog = []; companies = ["PT PLN NPS", "PT MKP", "MKP IC", "SECURITY", "Visitor"]; monitoringLog = []; monthlySchedule = {};
         }
         loadShiftRules();
         loadNotepadContent();
         loadDokumen();
         loadCatatan();
+        loadInventoryItems();
+        loadTransactionLog();
+
         if (employees.length === 0) {
             employees = [
-                { nid: "9120034APN", name: "RAFLI", position: "SECURITY", company: "Security", photoUrl: "", inOutStatus: 'Keluar', regu: 'A' },
+                { nid: "9120034APN", name: "RAFLI", position: "SECURITY", company: "SECURITY", photoUrl: "", inOutStatus: 'Keluar', regu: 'A' },
                 { nid: "9120035BPN", name: "ANDI WIJAYA", position: "STAFF HR", company: "PT PLN NPS", photoUrl: "", inOutStatus: 'Keluar', regu: 'Daytime' }
             ];
             saveEmployees();
@@ -151,9 +176,9 @@ document.addEventListener('DOMContentLoaded', function () {
         toastNotification.textContent = message;
         toastNotification.className = 'toast show';
         if (isSuccess) {
-            toastNotification.style.backgroundColor = '#16a34a'; // Warna hijau sukses
+            toastNotification.style.backgroundColor = '#16a34a';
         } else {
-            toastNotification.style.backgroundColor = '#dc2626'; // Warna merah gagal
+            toastNotification.style.backgroundColor = '#dc2626';
         }
         setTimeout(() => {
             toastNotification.className = 'toast';
@@ -306,7 +331,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                                             <td>${emp.company}</td>
                                                             <td class="actions">
                                                                 <button class="btn-edit" data-action="edit-employee" data-nid="${emp.nid}"><i class="fas fa-edit"></i> Edit</button>
-                                                                <button class="btn-delete" data-action="delete-employee" data-nid="${emp.nid}"><i class="fas fa-trash"></i> Hapus</button>
+                                                                <button class="btn-delete-action btn-delete" data-action="delete-employee" data-nid="${emp.nid}"><i class="fas fa-trash"></i> Hapus</button>
                                                                 <button class="btn-barcode" data-action="download-barcode" data-nid="${emp.nid}" data-name="${emp.name}"><i class="fas fa-qrcode"></i> Barcode</button>
                                                             </td>
                                                         </tr>
@@ -371,6 +396,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (tableWrapper && tableWrapper.style.display !== 'none') {
             tableWrapper.innerHTML = '';
             document.getElementById('btn-show-list').click();
+            document.getElementById('btn-show-list').click(); // Panggil dua kali untuk refresh
         }
     }
     function manageCompanies() {
@@ -402,13 +428,13 @@ document.addEventListener('DOMContentLoaded', function () {
     function downloadBarcode(nid, name) { try { const qr = qrcode(0, 'L'); qr.addData(nid); qr.make(); const link = document.createElement("a"); link.href = qr.createDataURL(8, 8); link.download = `qrcode-${name.replace(/ /g, '_')}-${nid}.png`; link.click(); } catch (e) { console.error("Error membuat QR Code:", e); } }
     function updateClock() { if (clockElement) clockElement.textContent = new Date().toLocaleString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\./g, ':'); }
     function updateEmployeeDetails(employee) { if (detailsPhoto) { detailsPhoto.src = employee.photoUrl || `https://placehold.co/300x400/cccccc/333?text=${employee.name.split(' ')[0]}`; detailsName.textContent = employee.name; detailsNid.textContent = employee.nid; detailsPosition.textContent = employee.position; detailsStatus.textContent = employee.inOutStatus.toUpperCase(); detailsCompanyLogoImg.src = companyLogos[employee.company] || 'https://placehold.co/100x100/ffffff/333?text=Logo'; } }
-    function updateManpowerStats() { if (statPlnNps) { const count = companies.reduce((acc, company) => ({ ...acc, [company]: 0 }), {}); employees.forEach(emp => { if (emp.inOutStatus === 'Masuk' && count[emp.company] !== undefined) count[emp.company]++; }); statPlnNps.textContent = count["PT PLN NPS"] || 0; statMkp.textContent = count["PT MKP"] || 0; statMkpIc.textContent = count["PT MKP IC"] || 0; statSecurity.textContent = count["Security"] || 0; statVisitor.textContent = count["Visitor"] || 0; } }
+    function updateManpowerStats() { if (statPlnNps) { const count = companies.reduce((acc, company) => ({ ...acc, [company]: 0 }), {}); employees.forEach(emp => { if (emp.inOutStatus === 'Masuk' && count[emp.company] !== undefined) count[emp.company]++; }); statPlnNps.textContent = count["PT PLN NPS"] || 0; statMkp.textContent = count["PT MKP"] || 0; statMkpIc.textContent = count["MKP IC"] || 0; statSecurity.textContent = count["SECURITY"] || 0; statVisitor.textContent = count["Visitor"] || 0; } }
     function addLogEntry(employee, status, keterangan = '-') {
         const newLogEntry = { timestamp: new Date().toISOString(), name: employee.name, nid: employee.nid, position: employee.position, company: employee.company, status, keterangan };
         monitoringLog.unshift(newLogEntry);
         renderMonitoringLog();
         localStorage.setItem('monitoringLog', JSON.stringify(monitoringLog));
-        if (monitoringLog.length >= 5) { recapLog.unshift(...monitoringLog); saveRecapLog(); monitoringLog = []; localStorage.removeItem('monitoringLog'); }
+        if (monitoringLog.length >= 50) { recapLog.unshift(...monitoringLog); saveRecapLog(); monitoringLog = []; localStorage.removeItem('monitoringLog'); }
     }
     function processScan() {
         if (!nidScannerInput) return;
@@ -452,8 +478,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         let tableHTML = `<thead><tr><th>Tanggal</th><th>Regu A</th><th>Regu B</th><th>Regu C</th><th>Regu D</th></tr></thead><tbody>`;
         for (let day = 1; day <= daysInMonth; day++) {
-            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const scheduleForDay = monthlySchedule[dateKey] || {};
+            const dateKey = `${year}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const scheduleForDay = monthlySchedule[todayKey] || {};
             tableHTML += `<tr><td class="date-cell">${day}</td>` + ['A', 'B', 'C', 'D'].map(regu => `<td><select class="schedule-select" data-date="${dateKey}" data-regu="${regu}">${['Pagi', 'Sore', 'Malam', 'Libur'].map(shift => `<option value="${shift}" ${(scheduleForDay[regu] || 'Pagi') === shift ? 'selected' : ''}>${shift}</option>`).join('')}</select></td>`).join('') + `</tr>`;
         }
         document.getElementById('schedule-table').innerHTML = tableHTML + `</tbody>`;
@@ -490,16 +516,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const endTime = new Date();
                     endTime.setHours(rule.end.hour, rule.end.minute, 0, 0);
                     if (endTime < startTime) {
-                        const yesterday = new Date(now);
-                        yesterday.setDate(now.getDate() - 1);
-                        const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-                        const scheduleForYesterday = monthlySchedule[yesterdayKey];
-                        if (now < endTime) {
-                            if (scheduleForYesterday && scheduleForYesterday[regu] === shiftName) {
-                                activeRegu = regu;
-                                break;
-                            }
-                        } else if (now >= startTime) {
+                        if (now < endTime || now >= startTime) {
                             activeRegu = regu;
                             break;
                         }
@@ -533,11 +550,11 @@ document.addEventListener('DOMContentLoaded', function () {
             { nid: "1001", name: "BUDI SANTOSO", position: "OPERATOR BOILER", company: "PT PLN NPS", photoUrl: "", inOutStatus: 'Keluar', regu: 'A' },
             { nid: "1002", name: "SITI AMINAH", position: "SUPERVISOR MEKANIK", company: "PT MKP", photoUrl: "", inOutStatus: 'Masuk', regu: 'B' },
             { nid: "1003", name: "JOKO SUSILO", position: "STAFF ELEKTRIK", company: "PT PLN NPS", photoUrl: "", inOutStatus: 'Keluar', regu: 'C' },
-            { nid: "1004", name: "MARYAM WIJAYA", position: "HR SPV", company: "PT MKP IC", photoUrl: "", inOutStatus: 'Keluar', regu: 'Daytime' },
-            { nid: "1005", name: "DEDY PRASETYO", position: "SECURITY", company: "Security", photoUrl: "", inOutStatus: 'Masuk', regu: 'D' },
+            { nid: "1004", name: "MARYAM WIJAYA", position: "HR SPV", company: "MKP IC", photoUrl: "", inOutStatus: 'Keluar', regu: 'Daytime' },
+            { nid: "1005", name: "DEDY PRASETYO", position: "SECURITY", company: "SECURITY", photoUrl: "", inOutStatus: 'Masuk', regu: 'D' },
             { nid: "1006", name: "EKA PUTRI", position: "INSTRUMENT ENGR", company: "PT PLN NPS", photoUrl: "", inOutStatus: 'Keluar', regu: 'A' },
             { nid: "1007", name: "FAJAR HERMAWAN", position: "KOORDINATOR OPERASI", company: "PT MKP", photoUrl: "", inOutStatus: 'Masuk', regu: 'B' },
-            { nid: "1008", name: "GINA LESTARI", position: "STAFF KEUANGAN", company: "PT MKP IC", photoUrl: "", inOutStatus: 'Keluar', regu: 'Daytime' },
+            { nid: "1008", name: "GINA LESTARI", position: "STAFF KEUANGAN", company: "MKP IC", photoUrl: "", inOutStatus: 'Keluar', regu: 'Daytime' },
             { nid: "1009", name: "HADI RAHMAN", position: "K3L OFFICER", company: "PT PLN NPS", photoUrl: "", inOutStatus: 'Keluar', regu: 'C' },
         ];
         employees = [...employees, ...dummyEmployees];
@@ -564,6 +581,29 @@ document.addEventListener('DOMContentLoaded', function () {
         setupReferensiListeners();
     }
     
+    // --- FUNGSI UNTUK MENGATUR TAB DI MASTER DATA (VERSI PERBAIKAN) ---
+    function setupMasterDataTabs() {
+        const submenuBtns = contentBody.querySelectorAll('.submenu-bar .submenu-btn');
+        const contentSections = contentBody.querySelectorAll('.re-content-section');
+        const daftarBarangContent = contentBody.querySelector('#daftar-barang-content');
+    
+        // 1. Logika untuk ganti tab (Daftar Barang, Kategori, Lokasi)
+        submenuBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                submenuBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const targetId = this.dataset.target;
+                contentSections.forEach(section => {
+                    section.style.display = 'none';
+                });
+                const targetSection = contentBody.querySelector('#' + targetId);
+                if (targetSection) {
+                    targetSection.style.display = 'block';
+                }
+            });
+        });
+    }
+
     function setupKalkulatorFluktuatifListeners() {
         const tambahBtn = document.getElementById('tambah-blok-btn');
         const hitungBtn = document.getElementById('hitung-fluktuatif-btn');
@@ -575,16 +615,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const kalorBatubaraInput = document.getElementById('kalorBatubara');
         const hargaBatubaraInput = document.getElementById('hargaBatubara');
         const karbonBatubaraInput = document.getElementById('karbonBatubara');
+        const sulfurBatubaraInput = document.getElementById('sulfurBatubara');
+        
         const kalorBiomassaInput = document.getElementById('kalorBiomassa');
         const hargaBiomassaInput = document.getElementById('hargaBiomassa');
-
-        const moistureBatubaraInput = document.getElementById('moistureBatubara');
-        const ashBatubaraInput = document.getElementById('ashBatubara');
-        const sulfurBatubaraInput = document.getElementById('sulfurBatubara');
-        const moistureBiomassaInput = document.getElementById('moistureBiomassa');
-        const ashBiomassaInput = document.getElementById('ashBiomassa');
         const sulfurBiomassaInput = document.getElementById('sulfurBiomassa');
-        
+
         const unitRadios = document.querySelectorAll('input[name="unit-pembangkit"]');
         const efisiensiInput = document.getElementById('efisiensi');
 
@@ -635,8 +671,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     kalorBatubaraInput.value = selectedData.kalor;
                     hargaBatubaraInput.value = selectedData.harga;
                     karbonBatubaraInput.value = selectedData.karbon;
-                    moistureBatubaraInput.value = selectedData.moisture;
-                    ashBatubaraInput.value = selectedData.ash;
+                    document.getElementById('moistureBatubara').value = selectedData.moisture;
+                    document.getElementById('ashBatubara').value = selectedData.ash;
                     sulfurBatubaraInput.value = selectedData.sulfur;
                 }
             });
@@ -646,8 +682,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 if(selectedData){
                     kalorBiomassaInput.value = selectedData.kalor;
                     hargaBiomassaInput.value = selectedData.harga;
-                    moistureBiomassaInput.value = selectedData.moisture;
-                    ashBiomassaInput.value = selectedData.ash;
+                    document.getElementById('moistureBiomassa').value = selectedData.moisture;
+                    document.getElementById('ashBiomassa').value = selectedData.ash;
                     sulfurBiomassaInput.value = selectedData.sulfur;
                 }
             });
@@ -691,9 +727,6 @@ document.addEventListener('DOMContentLoaded', function () {
         
         const efisiensi = parseFloat(document.getElementById('efisiensi').value) / 100;
         const persenCoFiring = parseFloat(document.getElementById('persenCoFiring').value) / 100;
-
-        const jenisBatubara = document.getElementById('jenis-batubara').value;
-        const jenisBiomassa = document.getElementById('jenis-biomassa').value;
 
         const kalorBatubara = parseFloat(document.getElementById('kalorBatubara').value);
         const hargaBatubara = parseFloat(document.getElementById('hargaBatubara').value);
@@ -748,8 +781,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            const energiListrik_MWh = bebanMw;
-            const energiListrik_kkal = energiListrik_MWh * 860000;
+            const energiListrik_kkal = bebanMw * 860000;
             const energiPanasInput_kkal = energiListrik_kkal / efisiensi;
             const massaBatuBaraBaseline_kg_jam = energiPanasInput_kkal / kalorBatubara;
             const biayaBaseline_jam = (massaBatuBaraBaseline_kg_jam / 1000) * hargaBatubara;
@@ -931,98 +963,214 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (tabelDokumenBody) {
-             tabelDokumenBody.addEventListener('click', function(e){
-                 if(e.target.closest('.btn-delete')){
-                     const index = e.target.closest('.btn-delete').dataset.index;
-                     if(confirm(`Yakin ingin menghapus dokumen "${dokumenTerkait[index].namaFile}"?`)){
-                         dokumenTerkait.splice(index, 1);
-                         saveDokumen();
-                         renderTabelDokumen();
-                         showToast('Dokumen berhasil dihapus.');
-                     }
-                 }
-             });
+            tabelDokumenBody.addEventListener('click', function(e){
+                if(e.target.closest('.btn-delete')){
+                    const index = e.target.closest('.btn-delete').dataset.index;
+                    if(confirm(`Yakin ingin menghapus dokumen "${dokumenTerkait[index].namaFile}"?`)){
+                        dokumenTerkait.splice(index, 1);
+                        saveDokumen();
+                        renderTabelDokumen();
+                        showToast('Dokumen berhasil dihapus.');
+                    }
+                }
+            });
         }
 
         renderTabelDokumen();
         renderCatatan();
     }
+    
+    // --- FUNGSI BARU UNTUK INVENTORI ---
+    
+    // --- Fungsi untuk generate kode otomatis ---
+    function generateUniqueCode(prefix) {
+        let newCode;
+        let counter = 1;
+        do {
+            newCode = `${prefix}-${String(counter).padStart(4, '0')}`;
+            counter++;
+        } while (inventoryItems.some(item => item.code === newCode));
+        return newCode;
+    }
 
-    function renderTabelDokumen() {
-        const tbody = document.getElementById('tabel-dokumen-body');
+    function renderMasterData() {
+        const tbody = document.querySelector('#master-data-body');
         if (!tbody) return;
+        
         tbody.innerHTML = '';
-        if (dokumenTerkait.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Belum ada dokumen.</td></tr>';
-            return;
-        }
-        dokumenTerkait.forEach((doc, index) => {
-            const row = `
-                <tr>
-                    <td>${doc.namaFile}</td>
-                    <td>${doc.deskripsi}</td>
-                    <td>${new Date(doc.tanggal).toLocaleDateString('id-ID')}</td>
-                    <td class="actions" style="justify-content:flex-start;">
-                        <a href="dokumen/${doc.namaFile}" target="_blank" class="btn-barcode"><i class="fas fa-eye"></i> Lihat</a>
-                        <button class="btn-delete" data-index="${index}"><i class="fas fa-trash"></i> Hapus</button>
+        if (inventoryItems.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 20px;">Belum ada data barang. Silakan tambah barang baru.</td></tr>';
+        } else {
+            inventoryItems.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.code}</td>
+                    <td>${item.name}</td>
+                    <td>${item.category}</td>
+                    <td>${item.unit || '-'}</td>
+                    <td>${item.stock}</td>
+                    <td>${item.reorderPoint || '-'}</td>
+                    <td>${item.supplier || '-'}</td>
+                    <td>${item.location}</td>
+                    <td>${item.expiry || '-'}</td>
+                    <td class="actions">
+                        <button class="btn-primary" data-action="detail-item" data-index="${index}"><i class="fas fa-info-circle"></i> Detail</button>
+                        <button class="btn-edit" data-action="edit-item" data-index="${index}"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="btn-delete" data-action="delete-item" data-index="${index}"><i class="fas fa-trash"></i> Hapus</button>
                     </td>
-                </tr>
-            `;
-            tbody.innerHTML += row;
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        const itemFormEl = document.getElementById('item-form');
+        if(itemFormEl && !itemFormEl.dataset.listenerAttached){
+            itemFormEl.addEventListener('submit', handleItemFormSubmit);
+            itemFormEl.dataset.listenerAttached = 'true';
+        }
+    }
+
+    function openItemForm(itemData = null, index = null) {
+        const modal = document.getElementById('itemFormModal');
+        const form = document.getElementById('item-form');
+        const title = document.getElementById('item-form-title');
+        const itemCodeInput = document.getElementById('item-code');
+        const generateCodeBtn = document.getElementById('generate-code-btn');
+        form.reset();
+        document.getElementById('item-index').value = '';
+        
+        const categorySelect = document.getElementById('item-category');
+        categorySelect.innerHTML = `<option value="">Pilih Kategori</option>`;
+        inventoryCategories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            categorySelect.appendChild(option);
         });
+
+        if (itemData) {
+            title.textContent = 'Edit Barang';
+            document.getElementById('item-index').value = index;
+            itemCodeInput.value = itemData.code;
+            document.getElementById('item-name').value = itemData.name;
+            document.getElementById('item-category').value = itemData.category;
+            document.getElementById('item-unit').value = itemData.unit; 
+            document.getElementById('item-stock').value = itemData.stock;
+            document.getElementById('item-reorder').value = itemData.reorderPoint; 
+            document.getElementById('item-supplier').value = itemData.supplier; 
+            document.getElementById('item-location').value = itemData.location;
+            document.getElementById('item-expiry').value = itemData.expiry || '';
+            if (generateCodeBtn) generateCodeBtn.style.display = 'none';
+        } else {
+            title.textContent = 'Tambah Barang Baru';
+            if (generateCodeBtn) generateCodeBtn.style.display = 'inline-block';
+            itemCodeInput.value = '';
+        }
+        openModal(modal);
     }
     
-    function renderCatatan() {
-        const container = document.getElementById('catatan-display-container');
-        if (!container) return;
-        container.innerHTML = '';
-        if (catatanReferensi.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color:#64748b;">Belum ada catatan.</p>';
-            return;
-        }
-        [...catatanReferensi].reverse().forEach((catatan, index) => {
-            const noteElement = document.createElement('div');
-            noteElement.classList.add('catatan-item');
-            const formattedDate = new Date(catatan.timestamp).toLocaleString('id-ID', {dateStyle: 'full', timeStyle: 'short'});
-            noteElement.innerHTML = `
-                <p class="catatan-teks">${catatan.teks.replace(/\n/g, '<br>')}</p>
-                <p class="catatan-tanggal">Dicatat pada: ${formattedDate}</p>
-                <div class="catatan-actions">
-                    <button class="btn-edit-note" data-index="${catatanReferensi.length - 1 - index}"><i class="fas fa-edit"></i> Edit</button>
-                    <button class="btn-delete-note" data-index="${catatanReferensi.length - 1 - index}"><i class="fas fa-trash"></i> Hapus</button>
+    // Fungsi baru untuk menampilkan detail item
+    function showItemDetail(item) {
+        const content = document.getElementById('item-detail-content');
+        if (!content) return;
+        
+        // Filter riwayat transaksi berdasarkan kode barang
+        const itemTransactions = transactionLog.filter(log => log.itemCode === item.code);
+
+        let transactionHtml = '';
+        if (itemTransactions.length > 0) {
+            transactionHtml = `
+                <div class="log-table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Jenis</th>
+                                <th>Jumlah</th>
+                                <th>Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemTransactions.map(log => `
+                                <tr>
+                                    <td>${new Date(log.timestamp).toLocaleString('id-ID')}</td>
+                                    <td>${log.type}</td>
+                                    <td>${log.quantity} ${item.unit}</td>
+                                    <td>${log.notes || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
                 </div>
             `;
-            container.appendChild(noteElement);
-        });
-        
-        container.querySelectorAll('.btn-delete-note').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = e.target.dataset.index;
-                if(confirm('Yakin ingin menghapus catatan ini?')) {
-                    catatanReferensi.splice(index, 1);
-                    saveCatatan();
-                    renderCatatan();
-                    showToast('Catatan berhasil dihapus.');
-                }
-            });
-        });
+        } else {
+            transactionHtml = '<p style="text-align: center; color: #a9c1d9;">Belum ada riwayat transaksi untuk barang ini.</p>';
+        }
 
-        container.querySelectorAll('.btn-edit-note').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = e.target.dataset.index;
-                const newTeks = prompt('Edit catatan:', catatanReferensi[index].teks);
-                if(newTeks !== null && newTeks.trim() !== '') {
-                    catatanReferensi[index].teks = newTeks.trim();
-                    catatanReferensi[index].timestamp = new Date().toISOString();
-                    saveCatatan();
-                    renderCatatan();
-                    showToast('Catatan berhasil diperbarui.');
-                }
-            });
-        });
+        content.innerHTML = `
+            <div class="detail-section">
+                <h4>Informasi Utama</h4>
+                <p><strong>Kode Barang:</strong> ${item.code}</p>
+                <p><strong>Nama Barang:</strong> ${item.name}</p>
+                <p><strong>Kategori:</strong> ${item.category}</p>
+                <p><strong>Satuan:</strong> ${item.unit || '-'}</p>
+                <p><strong>Lokasi Gudang:</strong> ${item.location}</p>
+                <p><strong>Tanggal Kadaluarsa:</strong> ${item.expiry || '-'}</p>
+            </div>
+            <div class="detail-section" style="margin-top: 20px;">
+                <h4>Status Stok</h4>
+                <p><strong>Stok Saat Ini:</strong> ${item.stock} ${item.unit || ''}</p>
+                <p><strong>Reorder Point (Min. Stok):</strong> ${item.reorderPoint || '-'} ${item.unit || ''}</p>
+                <p><strong>Supplier/Vendor:</strong> ${item.supplier || '-'}</p>
+            </div>
+            <div class="detail-section" style="margin-top: 20px;">
+                <h4>Riwayat Transaksi</h4>
+                ${transactionHtml}
+            </div>
+        `;
+        openModal(itemDetailModal);
+    }
+
+    function handleItemFormSubmit(event) {
+        event.preventDefault();
+        const index = document.getElementById('item-index').value;
+        const newItem = {
+            code: document.getElementById('item-code').value.trim().toUpperCase(),
+            name: document.getElementById('item-name').value,
+            category: document.getElementById('item-category').value,
+            unit: document.getElementById('item-unit').value,
+            stock: parseInt(document.getElementById('item-stock').value),
+            reorderPoint: parseInt(document.getElementById('item-reorder').value),
+            supplier: document.getElementById('item-supplier').value,
+            location: document.getElementById('item-location').value,
+            expiry: document.getElementById('item-expiry').value
+        };
+        
+        // Pastikan kode barang unik saat menambahkan item baru
+        if (index === '' && inventoryItems.some(item => item.code === newItem.code)) {
+            showToast(`Error: Kode barang "${newItem.code}" sudah ada. Gunakan kode lain.`, false);
+            return;
+        }
+        
+        if (index === '') {
+            inventoryItems.push(newItem);
+            showToast('Barang baru berhasil ditambahkan.');
+        } else {
+            // Saat mengedit, cek duplikasi hanya jika kode barang berubah
+            const originalItem = inventoryItems[index];
+            if (originalItem.code !== newItem.code && inventoryItems.some(item => item.code === newItem.code)) {
+                showToast(`Error: Kode barang "${newItem.code}" sudah ada. Gunakan kode lain.`, false);
+                return;
+            }
+            inventoryItems[index] = newItem;
+            showToast('Data barang berhasil diperbarui.');
+        }
+        
+        saveInventoryItems();
+        closeModal(document.getElementById('itemFormModal'));
+        renderMasterData();
     }
     
-
     // --- NAVIGASI UTAMA ---
     function navigateTo(pageName, addToHistory = true) {
         currentPageName = pageName;
@@ -1033,6 +1181,8 @@ document.addEventListener('DOMContentLoaded', function () {
         
         const activeLink = document.querySelector(`.sidebar .menu a[data-page="${pageName}"]`);
         if (activeLink) activeLink.classList.add('active');
+
+        contentBody.innerHTML = '';
 
         if (pageName === 'DASHBOARD') {
             const headerActions = document.querySelector('.content-header .header-actions');
@@ -1260,7 +1410,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     </button>
                 </div>
                 <div id="equipment-content-display" class="equipment-content-display">
-                     <p style="text-align:center; color:#64748b;">Pilih salah satu opsi di atas.</p>
+                    <p style="text-align:center; color:#64748b;">Pilih salah satu opsi di atas.</p>
                 </div>
             `;
             const mainButtonsContainer = document.querySelector('.equipment-options');
@@ -1284,7 +1434,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <button class="maintenance-btn" data-maintenance="pendukung"><i class="fas fa-toolbox"></i> Pendukung Teknik</button>
                             </div>
                             <div id="maintenance-content" class="equipment-content-display" style="margin-top:20px;">
-                                 <p style="text-align:center; color:#64748b;">Pilih salah satu sub-menu pemeliharaan di atas.</p>
+                                <p style="text-align:center; color:#64748b;">Pilih salah satu sub-menu pemeliharaan di atas.</p>
                             </div>
                         `;
                         const maintenanceBtns = document.querySelectorAll('.maintenance-btn');
@@ -1305,7 +1455,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                         <button class="maintenance-btn category-btn" data-category="lifting"><i class="fas fa-crane"></i> Peralatan Angkat</button>
                                     </div>
                                     <div id="category-content-display" class="equipment-content-display" style="margin-top:20px;">
-                                         <p style="text-align:center; color:#64748b;">Pilih kategori di atas untuk melihat daftar peralatan.</p>
+                                        <p style="text-align:center; color:#64748b;">Pilih kategori di atas untuk melihat daftar peralatan.</p>
                                     </div>
                                 `;
                                 document.querySelectorAll('.category-btn').forEach(catButton => {
@@ -1333,7 +1483,156 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             });
         }
-        else if (pageName === 'TOOLS') {
+        else if (pageName === 'WAREHOUSE & INVENTORY') {
+            const warehouseContent = document.getElementById('warehouse-content');
+            if (warehouseContent) {
+                contentBody.innerHTML = warehouseContent.innerHTML;
+            } else {
+                contentBody.innerHTML = '<p>Error: Konten Warehouse tidak ditemukan.</p>';
+                return;
+            }
+
+            const mainMenu = contentBody.querySelector('#warehouse-main-menu');
+            const dynamicContent = contentBody.querySelector('#warehouse-dynamic-content');
+            const backBtn = contentBody.querySelector('#warehouse-back-btn');
+
+            mainMenu.style.display = 'block';
+            dynamicContent.style.display = 'none';
+            backBtn.style.display = 'none';
+            
+            // Perbaikan: Menggunakan delegasi event pada elemen .options-grid
+            const optionsGrid = contentBody.querySelector('.options-grid');
+            if (optionsGrid) {
+                optionsGrid.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.option-btn');
+                    if (btn) {
+                        renderSubMenu(btn.dataset.action);
+                    }
+                });
+            }
+
+            // Perbaikan: Menggunakan delegasi event pada elemen induk .content-body untuk tombol-tombol dinamis
+            contentBody.addEventListener('click', (e) => {
+                const targetBtn = e.target.closest('button');
+                if (!targetBtn || !targetBtn.dataset.action) return;
+
+                const { action } = targetBtn.dataset;
+
+                // Memastikan ini adalah aksi untuk sub-menu warehouse
+                if (['add-item', 'import-items', 'delete-all-items', 'detail-item', 'edit-item', 'delete-item'].includes(action)) {
+                    const index = targetBtn.dataset.index;
+                    switch (action) {
+                        case 'add-item':
+                            openItemForm();
+                            break;
+                        case 'import-items':
+                            const itemImporter = contentBody.querySelector('#item-excel-importer');
+                            if (itemImporter) itemImporter.click();
+                            break;
+                        case 'delete-all-items':
+                            if (confirm('Yakin ingin menghapus SEMUA data master barang? Ini tidak bisa dibatalkan.')) {
+                                inventoryItems = [];
+                                saveInventoryItems();
+                                renderMasterData();
+                                showToast('Semua data barang berhasil dihapus.', true);
+                            }
+                            break;
+                        case 'detail-item':
+                            const selectedItem = inventoryItems[index];
+                            if (selectedItem) {
+                                showItemDetail(selectedItem);
+                            }
+                            break;
+                        case 'edit-item':
+                            openItemForm(inventoryItems[index], index);
+                            break;
+                        case 'delete-item':
+                            if (confirm(`Yakin ingin menghapus barang "${inventoryItems[index].name}"?`)) {
+                                inventoryItems.splice(index, 1);
+                                saveInventoryItems();
+                                renderMasterData();
+                                showToast('Barang berhasil dihapus.', true);
+                            }
+                            break;
+                    }
+                }
+                
+                // Tambahkan aksi lain jika diperlukan
+                if (action === 'warehouse-back-btn') {
+                    mainMenu.style.display = 'block';
+                    dynamicContent.style.display = 'none';
+                    backBtn.style.display = 'none';
+                    dynamicContent.innerHTML = '';
+                }
+            });
+
+            const renderSubMenu = (menuName) => {
+                let contentHTML = '';
+                if (menuName === 'master-data') {
+                    contentHTML = `
+                        <div class="submenu-bar">
+                            <button class="submenu-btn active" data-target="daftar-barang-content"><i class="fas fa-boxes"></i> Daftar Barang/Material</button>
+                            <button class="submenu-btn" data-target="kategori-barang-content"><i class="fas fa-tags"></i> Kategori Barang</button>
+                            <button class="submenu-btn" data-target="lokasi-gudang-content"><i class="fas fa-map-marker-alt"></i> Lokasi Gudang/Rak</button>
+                        </div>
+
+                        <div id="daftar-barang-content" class="re-content-section">
+                            <div class="action-bar-sub">
+                                <button class="btn-success" data-action="add-item"><i class="fas fa-plus"></i> Tambah Barang</button>
+                                <button class="btn-primary" data-action="import-items"><i class="fas fa-file-import"></i> Impor dari Excel</button>
+                                <input type="file" id="item-excel-importer" style="display:none" accept=".xlsx, .xls">
+                                <button class="btn-delete" data-action="delete-all-items"><i class="fas fa-trash-alt"></i> Hapus Semua Data</button>
+                            </div>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Kode Barang</th>
+                                            <th>Nama Barang</th>
+                                            <th>Kategori</th>
+                                            <th>Satuan</th>
+                                            <th>Stok</th>
+                                            <th>Min. Stok</th>
+                                            <th>Supplier</th>
+                                            <th>Lokasi</th>
+                                            <th>Kadaluarsa</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="master-data-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div id="kategori-barang-content" class="re-content-section" style="display:none;">
+                            <h3><i class="fas fa-tags"></i> Manajemen Kategori Barang</h3>
+                            <p style="text-align: center; margin-top: 20px; color: #64748b;">Fitur ini sedang dalam pengembangan.</p>
+                        </div>
+                        
+                        <div id="lokasi-gudang-content" class="re-content-section" style="display:none;">
+                            <h3><i class="fas fa-map-marker-alt"></i> Manajemen Lokasi Gudang/Rak</h3>
+                            <p style="text-align: center; margin-top: 20px; color: #64748b;">Fitur ini sedang dalam pengembangan.</p>
+                        </div>
+                    `;
+                } else {
+                    contentHTML = `<h3 style="text-align: center; margin-top: 20px;"><i class="fas fa-info-circle"></i> ${menuName.replace(/-/g, ' ').toUpperCase()}</h3><p style="text-align: center; color: #64748b;">Konten untuk modul ini akan segera hadir.</p>`;
+                }
+            
+                dynamicContent.innerHTML = contentHTML;
+                mainMenu.style.display = 'none';
+                dynamicContent.style.display = 'block';
+                backBtn.style.display = 'inline-flex';
+                
+                if (menuName === 'master-data') {
+                    renderMasterData();
+                    setupMasterDataTabs();
+                }
+            };
+        }
+        else if (pageName === 'TOOLS MANAGEMENT') {
+            contentBody.innerHTML = `<p>Konten untuk halaman <strong>${pageName}</strong> sedang dalam pengembangan.</p>`;
+        }
+        else if (pageName === 'SOP & WORK INSTRUCTIONS') {
             contentBody.innerHTML = `<p>Konten untuk halaman <strong>${pageName}</strong> sedang dalam pengembangan.</p>`;
         }
         else if (pageName === 'RENEWABLE ENERGY') {
@@ -1344,7 +1643,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     <button class="submenu-btn" data-target="dokumen-content"><i class="fas fa-file-pdf"></i> Dokumen Pendukung</button>
                     <button class="submenu-btn" data-action="load-dummy-data"><i class="fas fa-database"></i> Dummy Data</button>
                 </div>
-
                 <div id="smart-cofiring-content" class="re-content-section">
                     <div class="kalkulator-container">
                         <h1>"Smart Co-firing"</h1>
@@ -1381,94 +1679,94 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="form-section">
                             <h3>2. Data Bahan Bakar & Ekonomi</h3>
                             <div class="parameter-grid-bahan-bakar">
-                                 <div class="input-group">
-                                     <label for="jenis-batubara">Jenis Batu Bara</label>
-                                     <select id="jenis-batubara"></select>
-                                 </div>
-                                 <div class="input-group">
-                                     <label for="kalorBatubara">
-                                         Nilai Kalor (kkal/kg)
-                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Nilai kalor bahan bakar (Higher Heating Value).</span></span>
-                                     </label>
-                                     <input type="number" id="kalorBatubara" required>
-                                 </div>
-                                 <div class="input-group">
-                                     <label for="hargaBatubara">
-                                         Harga (Rp/ton)
-                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Harga bahan bakar per ton.</span></span>
-                                     </label>
-                                     <input type="number" id="hargaBatubara" required>
-                                 </div>
-                                 <div class="input-group">
-                                     <label for="karbonBatubara">
-                                         Kandungan Karbon (%)
-                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kandungan karbon (C) dalam bahan bakar, untuk menghitung emisi CO2.</span></span>
-                                     </label>
-                                     <input type="number" step="0.1" id="karbonBatubara" required>
-                                 </div>
-                                 <div class="input-group">
-                                     <label for="moistureBatubara">
-                                         Moisture (%)
-                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar air dalam bahan bakar. Mempengaruhi nilai kalor bersih.</span></span>
-                                     </label>
-                                     <input type="number" step="0.1" id="moistureBatubara" required>
-                                 </div>
-                                 <div class="input-group">
-                                     <label for="ashBatubara">
-                                         Ash Content (%)
-                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar abu dalam bahan bakar. Mempengaruhi nilai kalor dan potensi fouling.</span></span>
-                                     </label>
-                                     <input type="number" step="0.1" id="ashBatubara" required>
-                                 </div>
-                                 <div class="input-group">
-                                     <label for="sulfurBatubara">
-                                         Sulfur Content (%)
-                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar belerang (S) dalam bahan bakar. Untuk menghitung emisi SO2.</span></span>
-                                     </label>
-                                     <input type="number" step="0.01" id="sulfurBatubara" required>
-                                 </div>
+                                    <div class="input-group">
+                                        <label for="jenis-batubara">Jenis Batu Bara</label>
+                                        <select id="jenis-batubara"></select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="kalorBatubara">
+                                            Nilai Kalor (kkal/kg)
+                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Nilai kalor bahan bakar (Higher Heating Value).</span></span>
+                                        </label>
+                                        <input type="number" id="kalorBatubara" required>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="hargaBatubara">
+                                            Harga (Rp/ton)
+                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Harga bahan bakar per ton.</span></span>
+                                        </label>
+                                        <input type="number" id="hargaBatubara" required>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="karbonBatubara">
+                                            Kandungan Karbon (%)
+                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kandungan karbon (C) dalam bahan bakar, untuk menghitung emisi CO2.</span></span>
+                                        </label>
+                                        <input type="number" step="0.1" id="karbonBatubara" required>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="moistureBatubara">
+                                            Moisture (%)
+                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar air dalam bahan bakar. Mempengaruhi nilai kalor bersih.</span></span>
+                                        </label>
+                                        <input type="number" step="0.1" id="moistureBatubara" required>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="ashBatubara">
+                                            Ash Content (%)
+                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar abu dalam bahan bakar. Mempengaruhi nilai kalor dan potensi fouling.</span></span>
+                                        </label>
+                                        <input type="number" step="0.1" id="ashBatubara" required>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="sulfurBatubara">
+                                            Sulfur Content (%)
+                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar belerang (S) dalam bahan bakar. Untuk menghitung emisi SO2.</span></span>
+                                        </label>
+                                        <input type="number" step="0.01" id="sulfurBatubara" required>
+                                    </div>
                             </div>
                             <hr class="pemisah-bahan-bakar">
                             <div class="parameter-grid-bahan-bakar">
-                                 <div class="input-group">
-                                     <label for="jenis-biomassa">Jenis Biomassa</label>
-                                     <select id="jenis-biomassa"></select>
-                                 </div>
-                                 <div class="input-group">
-                                     <label for="kalorBiomassa">
-                                         Nilai Kalor (kkal/kg)
-                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Nilai kalor bahan bakar (Higher Heating Value).</span></span>
-                                     </label>
-                                     <input type="number" id="kalorBiomassa" required>
-                                 </div>
-                                 <div class="input-group">
-                                     <label for="hargaBiomassa">
-                                         Harga (Rp/ton)
-                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Harga bahan bakar per ton.</span></span>
-                                     </label>
-                                     <input type="number" id="hargaBiomassa" required>
-                                 </div>
-                                 <div class="input-group">
-                                     <label for="moistureBiomassa">
-                                         Moisture (%)
-                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar air dalam bahan bakar. Mempengaruhi nilai kalor bersih.</span></span>
-                                     </label>
-                                     <input type="number" step="0.1" id="moistureBiomassa" required>
-                                 </div>
-                                 <div class="input-group">
-                                     <label for="ashBiomassa">
-                                         Ash Content (%)
-                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar abu dalam bahan bakar. Mempengaruhi nilai kalor dan potensi fouling.</span></span>
-                                     </label>
-                                     <input type="number" step="0.1" id="ashBiomassa" required>
-                                 </div>
-                                  <div class="input-group">
-                                     <label for="sulfurBiomassa">
-                                         Sulfur Content (%)
-                                         <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar belerang (S) dalam bahan bakar. Untuk menghitung emisi SO2.</span></span>
-                                     </label>
-                                     <input type="number" step="0.01" id="sulfurBiomassa" required>
-                                 </div>
+                                    <div class="input-group">
+                                        <label for="jenis-biomassa">Jenis Biomassa</label>
+                                        <select id="jenis-biomassa"></select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="kalorBiomassa">
+                                            Nilai Kalor (kkal/kg)
+                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Nilai kalor bahan bakar (Higher Heating Value).</span></span>
+                                        </label>
+                                        <input type="number" id="kalorBiomassa" required>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="hargaBiomassa">
+                                            Harga (Rp/ton)
+                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Harga bahan bakar per ton.</span></span>
+                                        </label>
+                                        <input type="number" id="hargaBiomassa" required>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="moistureBiomassa">
+                                            Moisture (%)
+                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar air dalam bahan bakar. Mempengaruhi nilai kalor bersih.</span></span>
+                                        </label>
+                                        <input type="number" step="0.1" id="moistureBiomassa" required>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="ashBiomassa">
+                                            Ash Content (%)
+                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar abu dalam bahan bakar. Mempengaruhi nilai kalor dan potensi fouling.</span></span>
+                                        </label>
+                                        <input type="number" step="0.1" id="ashBiomassa" required>
+                                    </div>
+                                        <div class="input-group">
+                                        <label for="sulfurBiomassa">
+                                            Sulfur Content (%)
+                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar belerang (S) dalam bahan bakar. Untuk menghitung emisi SO2.</span></span>
+                                        </label>
+                                        <input type="number" step="0.01" id="sulfurBiomassa" required>
+                                    </div>
                             </div>
                         </div>
 
@@ -1507,7 +1805,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <p>Total Biaya (Co-firing)</p>
                                 <span id="totalBiayaCofiring">Rp 0</span>
                             </div>
-                             <div class="hasil-item highlight">
+                                <div class="hasil-item highlight">
                                 <p>Selisih Biaya Tahunan</p>
                                 <span id="totalSelisihBiaya">Rp 0</span>
                             </div>
@@ -1516,41 +1814,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
 
                 <div id="referensi-content" class="re-content-section" style="display:none;">
-                     <div class="referensi-container">
+                    <div class="referensi-container">
                         <h1>Referensi dan Database Perhitungan</h1>
                         <p class="deskripsi">Halaman ini berisi acuan, standar, dan catatan operasional terkait co-firing.</p>
-                        <div class="referensi-section">
-                            <h3><i class="fas fa-calculator"></i> Rumus Perhitungan Utama</h3>
-                            <div class="rumus-box">
-                                <h4>1. Kebutuhan Energi Panas Input (kkal/jam)</h4>
-                                <p class="rumus-formula">Energi Panas = (Beban MW × 860.000) / Efisiensi PLTU</p>
-                            </div>
-                            <div class="rumus-box">
-                                <h4>2. Kebutuhan Massa Bahan Bakar (kg/jam)</h4>
-                                <p class="rumus-formula">Massa = Energi Panas / Nilai Kalor Bahan Bakar</p>
-                            </div>
-                            <div class="rumus-box">
-                                <h4>3. Emisi CO2 dari Batu Bara (kg/jam)</h4>
-                                <p class="rumus-formula">Emisi CO2 = Massa Batu Bara × % Karbon × (44 / 12)</p>
-                            </div>
-                             <div class="rumus-box">
-                                <h4>4. Emisi SO2 dari Bahan Bakar (kg/jam)</h4>
-                                <p class="rumus-formula">Emisi SO2 = Massa Bahan Bakar × % Sulfur × 2</p>
-                            </div>
-                        </div>
-                         <div class="referensi-section">
-                            <h3><i class="fas fa-sticky-note"></i> Catatan & Log Perubahan</h3>
-                            <div id="catatan-display-container"></div>
-                            <textarea id="catatan-baru-textarea" class="notepad-textarea" placeholder="Tulis catatan baru di sini..."></textarea>
-                            <button id="simpan-catatan-btn" class="btn-success" style="margin-top:10px;"><i class="fas fa-save"></i> Simpan Catatan Baru</button>
-                        </div>
-                     </div>
-                </div>
-
-                <div id="dokumen-content" class="re-content-section" style="display:none;">
-                    <div class="referensi-container">
-                        <h1>Dokumen dan Regulasi Pendukung</h1>
-                        <p class="deskripsi">Pustaka untuk dokumen standar (SOP, regulasi, data teknis).</p>
                         
                         <div class="referensi-section">
                             <h3><i class="fas fa-file-alt"></i> Pustaka Dokumen</h3>
@@ -1573,8 +1839,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                 </div>
 
-                `;
+            `;
             setupRenewableEnergyTabs();
+        }
+        else if (pageName === 'CSR') {
+            contentBody.innerHTML = `<p>Konten untuk halaman <strong>${pageName}</strong> sedang dalam pengembangan.</p>`;
         }
         else {
             contentBody.innerHTML = `<p>Konten untuk halaman <strong>${pageName}</strong> sedang dalam pengembangan.</p>`;
@@ -1603,17 +1872,29 @@ document.addEventListener('DOMContentLoaded', function () {
         const file = e.target.files[0];
         if (file) { const reader = new FileReader(); reader.onload = (event) => { formPhotoPreview.src = event.target.result; }; reader.readAsDataURL(file); }
     });
+    
+    // ====================================================================
+    // PERBAIKAN: Menggunakan Event Delegation untuk menangani klik di contentBody
+    // ====================================================================
     contentBody.addEventListener('click', (e) => {
         const targetButton = e.target.closest('button');
         if (!targetButton) return;
-        const { action, nid, name } = targetButton.dataset;
+
+        const { action, nid, name, index } = targetButton.dataset;
+
         switch (action) {
+            // Aksi-aksi untuk modul SDM (Human Resource Performance)
             case 'open-monitoring': openMonitoringDashboard(); break;
             case 'open-recap': openRecapModal(); break;
             case 'add-employee': openEmployeeForm(); break;
             case 'edit-employee': openEmployeeForm(employees.find(e => e.nid === nid)); break;
             case 'delete-employee':
-                if (confirm(`Yakin ingin menghapus karyawan dengan NID ${nid}?`)) { employees = employees.filter(e => e.nid !== nid); saveEmployees(); navigateTo('HUMAN RESOURCE PERFORMANCE'); showToast("Karyawan berhasil dihapus."); }
+                if (confirm(`Yakin ingin menghapus karyawan dengan NID ${nid}?`)) { 
+                    employees = employees.filter(e => e.nid !== nid); 
+                    saveEmployees(); 
+                    navigateTo('HUMAN RESOURCE PERFORMANCE', false); 
+                    showToast("Karyawan berhasil dihapus."); 
+                }
                 break;
             case 'delete-all':
                 if (confirm("Lanjutkan menghapus semua daftar karyawan?")) {
@@ -1623,6 +1904,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const tableWrapper = document.getElementById('employee-table-wrapper');
                     if (tableWrapper) {
                         tableWrapper.innerHTML = '';
+                        document.getElementById('btn-show-list').click();
                         document.getElementById('btn-show-list').click();
                     }
                 }
@@ -1634,10 +1916,66 @@ document.addEventListener('DOMContentLoaded', function () {
             case 'toggle-notepad': toggleNotepad(); break;
             case 'load-dummy-data':
                 loadDummyData();
-                navigateTo(currentPageName);
+                navigateTo(currentPageName, false);
+                break;
+            
+            // Aksi-aksi untuk modul Inventaris (Warehouse & Inventory)
+            case 'add-item':
+                openItemForm();
+                break;
+            case 'import-items':
+                const itemImporter = contentBody.querySelector('#item-excel-importer');
+                if (itemImporter) itemImporter.click();
+                break;
+            case 'delete-all-items':
+                if (confirm('Yakin ingin menghapus SEMUA data master barang? Ini tidak bisa dibatalkan.')) {
+                    inventoryItems = [];
+                    saveInventoryItems();
+                    renderMasterData();
+                    showToast('Semua data barang berhasil dihapus.', true);
+                }
+                break;
+            case 'detail-item':
+                const selectedItem = inventoryItems[index];
+                if (selectedItem) {
+                    showItemDetail(selectedItem);
+                }
+                break;
+            case 'edit-item':
+                openItemForm(inventoryItems[index], index);
+                break;
+            case 'delete-item':
+                if (confirm(`Yakin ingin menghapus barang "${inventoryItems[index].name}"?`)) {
+                    inventoryItems.splice(index, 1);
+                    saveInventoryItems();
+                    renderMasterData();
+                    showToast('Barang berhasil dihapus.', true);
+                }
                 break;
         }
     });
+
+    // --- EVENT LISTENER UNTUK GENERATE KODE OTOMATIS
+    if (generateCodeBtn) {
+        generateCodeBtn.addEventListener('click', () => {
+            const itemCodeInput = document.getElementById('item-code');
+            const itemCategorySelect = document.getElementById('item-category');
+            let prefix = 'IT'; // Default
+            
+            // Menentukan prefix berdasarkan kategori
+            if (itemCategorySelect.value) {
+                switch (itemCategorySelect.value) {
+                    case 'Sparepart': prefix = 'SP'; break;
+                    case 'Alat': prefix = 'AL'; break;
+                    case 'Consumable': prefix = 'CS'; break;
+                    case 'Bahan Baku': prefix = 'BB'; break;
+                }
+            }
+            
+            itemCodeInput.value = generateUniqueCode(prefix);
+            showToast('Kode barang berhasil dibuat secara otomatis!', true);
+        });
+    }
 
     const editProfileBtn = document.getElementById('edit-profile-btn');
     if (editProfileBtn) {
@@ -1656,6 +1994,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const shiftTimesForm = document.getElementById('shift-times-form');
     if (shiftTimesForm) { shiftTimesForm.addEventListener('submit', (e) => { e.preventDefault(); ['Pagi', 'Sore', 'Malam', 'Daytime'].forEach(shift => { const name = shift.toLowerCase(); shiftRules[shift].start = { hour: parseInt(document.getElementById(`${name}-start-hour`).value), minute: parseInt(document.getElementById(`${name}-start-minute`).value) }; shiftRules[shift].end = { hour: parseInt(document.getElementById(`${name}-end-hour`).value), minute: parseInt(document.getElementById(`${name}-end-minute`).value) }; }); saveShiftRules(); showToast('Jam kerja berhasil disimpan!'); closeModal(shiftTimesModal); }); }
 
+    const itemForm = document.getElementById('item-form');
+    if(itemForm){
+        itemForm.addEventListener('submit', handleItemFormSubmit);
+    }
+    
     if (downloadRecapBtn) downloadRecapBtn.addEventListener('click', downloadRecapExcel);
     if (clearRecapBtn) clearRecapBtn.addEventListener('click', clearRecapData);
     if (toggleFullscreenBtn) toggleFullscreenBtn.addEventListener('click', toggleFullscreen);
@@ -1680,7 +2023,13 @@ document.addEventListener('DOMContentLoaded', function () {
     if (monitoringFooter) monitoringFooter.addEventListener('click', (e) => { const editButton = e.target.closest('.k3-edit-btn'); if (editButton) { const targetId = editButton.dataset.target; const pElement = document.getElementById(targetId); const newValue = prompt(`Masukkan nilai baru untuk "${pElement.previousElementSibling.textContent}":`, pElement.textContent); if (newValue !== null && newValue.trim() !== "") { pElement.textContent = newValue.trim().toUpperCase(); saveK3Stats(); showToast("Statistik K3 berhasil diperbarui."); } } });
 
     const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) { logoutBtn.addEventListener('click', () => { sessionStorage.clear(); showToast("Anda telah berhasil logout."); window.location.href = 'login.html'; }); }
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            sessionStorage.clear();
+            showToast("Anda telah berhasil logout.");
+            window.location.href = 'login.html';
+        });
+    }
 
     // INISIALISASI APLIKASI
     loadData();
