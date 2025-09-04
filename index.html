@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EnergiX</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="fix-style.css?v=8" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -101,7 +101,36 @@
                             </table>
                         </div>
                     </div>
-                </div>
+
+                    <div id="warehouse-inbound-content" style="display: none;">
+                        <div class="form-section">
+                            <h3>Input Barang Masuk</h3>
+                            <form id="inbound-form">
+                                <div class="input-group">
+                                    <label for="inbound-code">Kode Barang</label>
+                                    <input type="text" id="inbound-code" placeholder="Cari atau masukkan kode barang" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="inbound-name">Nama Barang</label>
+                                    <input type="text" id="inbound-name" placeholder="Nama barang" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="inbound-quantity">Jumlah</label>
+                                    <input type="number" id="inbound-quantity" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="inbound-notes">Catatan</label>
+                                    <textarea id="inbound-notes" placeholder="Tulis catatan jika ada"></textarea>
+                                </div>
+                                <button type="submit" class="btn-success">Proses Barang Masuk</button>
+                            </form>
+                            <div id="new-item-prompt" style="display: none; margin-top: 20px;" class="blinking-info-container">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <p>Barang tidak ditemukan di Master Data. <a href="#" id="add-new-item-link" class="blinking-text">Klik di sini untuk menambahkannya.</a></p>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
             </div>
         </main>
     </div>
@@ -529,4 +558,3 @@
 </body>
 </html>
 <script>
-
