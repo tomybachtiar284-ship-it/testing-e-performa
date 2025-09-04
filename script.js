@@ -1,2166 +1,1698 @@
-// ===============================================
-//         KODE SCRIPT.JS (FINAL & LENGKAP)
-// ===============================================
-document.addEventListener('DOMContentLoaded', function () {
-    // --- CEK STATUS LOGIN SAAT APLIKASI DIMULAI ---
-    const statusLogin = sessionStorage.getItem('statusLogin');
-    console.log("Status login di sessionStorage:", statusLogin); // BARIS DEBUGGING
-    
-    if (statusLogin !== 'true') {
-        window.location.href = 'login.html';
-        return;
-    }
-
-    Chart.register(ChartDataLabels);
-
-    // --- ELEMEN DOM ---
-    const menuLinks = document.querySelectorAll('.sidebar .menu ul li a');
-    const pageTitle = document.getElementById('page-title');
-    const contentBody = document.getElementById('content-body');
-    const employeeFormModal = document.getElementById('employeeFormModal');
-    const employeeForm = document.getElementById('employee-form');
-    const formTitle = document.getElementById('form-title');
-    const formPhotoInput = document.getElementById('form-photo');
-    const formPhotoPreview = document.getElementById('form-photo-preview');
-    const monitoringModal = document.getElementById('monitoringModal');
-    const clockElement = document.getElementById('real-time-clock');
-    const monitoringLogBody = document.getElementById('monitoring-log-body');
-    const detailsPhoto = document.getElementById('details-photo');
-    const detailsName = document.getElementById('details-name');
-    const detailsNid = document.getElementById('details-nid');
-    const detailsPosition = document.getElementById('details-position');
-    const detailsStatus = document.getElementById('details-status');
-    const statPlnNps = document.getElementById('stat-pln-nps');
-    const statMkp = document.getElementById('stat-mkp');
-    const statMkpIc = document.getElementById('stat-mkp-ic');
-    const statSecurity = document.getElementById('stat-security');
-    const statVisitor = document.getElementById('stat-visitor');
-    const nidScannerInput = document.getElementById('nid-scanner-input');
-    const scanButton = document.getElementById('scan-button');
-    const monitoringFooter = document.querySelector('.monitoring-footer');
-    const toggleFullscreenBtn = document.getElementById('toggle-fullscreen-btn');
-    const detailsCompanyLogoImg = document.getElementById('details-company-logo-img');
-    const recapModal = document.getElementById('recapModal');
-    const recapLogBody = document.getElementById('recap-log-body');
-    const downloadRecapBtn = document.getElementById('download-recap-btn');
-    const clearRecapBtn = document.getElementById('clear-recap-btn');
-    const closeButtons = document.querySelectorAll('.close-button');
-    const refreshBtn = document.getElementById('refresh-btn');
-    const shiftScheduleModal = document.getElementById('shiftScheduleModal');
-    const shiftTimesModal = document.getElementById('shiftTimesModal');
-    const navBackBtn = document.getElementById('nav-back-btn');
-    const navForwardBtn = document.getElementById('nav-forward-btn');
-    const toastNotification = document.getElementById('toast-notification');
-    const itemDetailModal = document.getElementById('itemDetailModal');
-    const editProfileBtn = document.getElementById('edit-profile-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const shiftTimesForm = document.getElementById('shift-times-form');
-    const itemForm = document.getElementById('item-form');
-
-    // --- STATE APLIKASI ---
-    let employees = [];
-    let companies = [];
-    let recapLog = [];
-    let monitoringLog = [];
-    let monthlySchedule = {};
-    let shiftRules = {};
-    let clockInterval = null;
-    let isFullscreen = false;
-    let currentPageName = '';
-    let notepadContent = '';
-    let newProfilePicData = null;
-    let dataUntukRincian = {};
-    let dokumenTerkait = [];
-    let catatanReferensi = [];
-    
-    // --- STATE APLIKASI BARU UNTUK INVENTORI ---
-    let inventoryItems = [];
-    const inventoryCategories = ["Bahan Baku", "Sparepart", "Alat", "Consumable"];
-    let transactionLog = [];
-    const generateCodeBtn = document.getElementById('generate-code-btn');
-
-
-    const lateSound = new Audio('sounds/terlambat.mp3');
-    const scanSound = new Audio('sounds/masuk.mp3');
-    const companyLogos = { "PT PLN NPS": "images/imagespln_nps.png", "PT MKP": "images/imagesmkp.png", "MKP IC": "images/imagesmkp_ic.png", "SECURITY": "images/scrt.png", "Visitor": "images/visitor.png" };
-    
-    // --- DATABASE KECIL UNTUK BAHAN BAKAR & UNIT ---
-    const dataUnitPembangkit = {
-        'Unit 1': { efisiensi: 35 },
-        'Unit 2': { efisiensi: 38 }
-    };
-    const dataBatuBara = {
-        'Sub-Bituminous (Umum)': { kalor: 5500, harga: 900000, karbon: 60, moisture: 25, ash: 10, sulfur: 0.5 },
-        'Lignite': { kalor: 4500, harga: 750000, karbon: 55, moisture: 35, ash: 15, sulfur: 0.8 },
-        'Bituminous': { kalor: 6500, harga: 1100000, karbon: 70, moisture: 15, ash: 8, sulfur: 0.3 }
-    };
-    const dataBiomassa = {
-        'Woodchip': { kalor: 4200, harga: 1200000, moisture: 15, ash: 2, sulfur: 0.05 },
-        'Cangkang Sawit': { kalor: 4800, harga: 1350000, moisture: 12, ash: 1.5, sulfur: 0.03 },
-        'Sekam Padi': { kalor: 3500, harga: 800000, moisture: 18, ash: 18, sulfur: 0.1 }
-    };
-
-    // --- FUNGSI MANAJEMEN DATA ---
-    function saveEmployees() { localStorage.setItem('employees', JSON.stringify(employees)); }
-    function saveRecapLog() { localStorage.setItem('recapLog', JSON.stringify(recapLog)); }
-    function saveCompanies() { localStorage.setItem('companies', JSON.stringify(companies)); }
-    function saveNotepadContent() { localStorage.setItem('notepadContent', notepadContent); }
-    function loadNotepadContent() { notepadContent = localStorage.getItem('notepadContent') || 'PENGUMUMAN PENTING UNTUK SELURUH KARYAWAN.'; }
-    function saveK3Stats() {
-        const k3Stats = {
-            'k3-jam-hilang': document.getElementById('k3-jam-hilang')?.textContent || '0',
-            'k3-kecelakaan': document.getElementById('k3-kecelakaan')?.textContent || 'NIHIL',
-            'k3-jam-lalu': document.getElementById('k3-jam-lalu')?.textContent || '0',
-            'k3-jam-total': document.getElementById('k3-jam-total')?.textContent || '0',
-        };
-        localStorage.setItem('k3Stats', JSON.stringify(k3Stats));
-    }
-    function saveSchedule() { localStorage.setItem('monthlySchedule', JSON.stringify(monthlySchedule)); }
-    function saveShiftRules() { localStorage.setItem('shiftRules', JSON.stringify(shiftRules)); }
-    function saveDokumen() { localStorage.setItem('dokumenTerkait', JSON.stringify(dokumenTerkait)); }
-    function loadDokumen() { dokumenTerkait = JSON.parse(localStorage.getItem('dokumenTerkait')) || []; }
-    function saveCatatan() { localStorage.setItem('catatanReferensi', JSON.stringify(catatanReferensi)); }
-    function loadCatatan() { catatanReferensi = JSON.parse(localStorage.getItem('catatanReferensi')) || []; }
-    
-    // --- FUNGSI MANAJEMEN DATA BARU UNTUK INVENTORI ---
-    function saveInventoryItems() { localStorage.setItem('inventoryItems', JSON.stringify(inventoryItems)); }
-    function loadInventoryItems() { inventoryItems = JSON.parse(localStorage.getItem('inventoryItems')) || []; }
-    function saveTransactionLog() { localStorage.setItem('transactionLog', JSON.stringify(transactionLog)); }
-    function loadTransactionLog() { transactionLog = JSON.parse(localStorage.getItem('transactionLog')) || []; }
-
-    function loadShiftRules() {
-        try {
-            const savedRules = JSON.parse(localStorage.getItem('shiftRules'));
-            if (savedRules) {
-                const defaultRules = { 'Pagi': { start: { hour: 7, minute: 30 }, end: { hour: 15, minute: 30 } }, 'Sore': { start: { hour: 15, minute: 30 }, end: { hour: 23, minute: 30 } }, 'Malam': { start: { hour: 23, minute: 30 }, end: { hour: 7, minute: 30 } }, 'Daytime': { start: { hour: 8, minute: 0 }, end: { hour: 16, minute: 0 } } };
-                let isValid = Object.keys(defaultRules).every(shift => savedRules[shift] && savedRules[shift].start && savedRules[shift].end);
-                if (isValid) { shiftRules = savedRules; } else { console.warn("Data shiftRules di localStorage tidak valid, menggunakan default."); shiftRules = defaultRules; saveShiftRules(); }
-            } else {
-                shiftRules = { 'Pagi': { start: { hour: 7, minute: 30 }, end: { hour: 15, minute: 30 } }, 'Sore': { start: { hour: 15, minute: 30 }, end: { hour: 23, minute: 30 } }, 'Malam': { start: { hour: 23, minute: 30 }, end: { hour: 7, minute: 30 } }, 'Daytime': { start: { hour: 8, minute: 0 }, end: { hour: 16, minute: 0 } } };
-                saveShiftRules();
-            }
-        } catch (e) {
-            console.error("Gagal memuat shiftRules:", e);
-            shiftRules = { 'Pagi': { start: { hour: 7, minute: 30 }, end: { hour: 15, minute: 30 } }, 'Sore': { start: { hour: 15, minute: 30 }, end: { hour: 23, minute: 30 } }, 'Malam': { start: { hour: 23, minute: 30 }, end: { hour: 7, minute: 30 } }, 'Daytime': { start: { hour: 8, minute: 0 }, end: { hour: 16, minute: 0 } } };
-        }
-    }
-    function loadData() {
-        try {
-            employees = JSON.parse(localStorage.getItem('employees')) || [];
-            recapLog = JSON.parse(localStorage.getItem('recapLog')) || [];
-            companies = JSON.parse(localStorage.getItem('companies')) || ["PT PLN NPS", "PT MKP", "MKP IC", "SECURITY", "Visitor"];
-            monitoringLog = JSON.parse(localStorage.getItem('monitoringLog')) || [];
-            monthlySchedule = JSON.parse(localStorage.getItem('monthlySchedule')) || {};
-        } catch (e) {
-            console.error("Gagal memuat data:", e);
-            employees = []; recapLog = []; companies = ["PT PLN NPS", "PT MKP", "MKP IC", "SECURITY", "Visitor"]; monitoringLog = []; monthlySchedule = {};
-        }
-        loadShiftRules();
-        loadNotepadContent();
-        loadDokumen();
-        loadCatatan();
-        loadInventoryItems();
-        loadTransactionLog();
-
-        if (employees.length === 0) {
-            employees = [
-                { nid: "9120034APN", name: "RAFLI", position: "SECURITY", company: "SECURITY", photoUrl: "", inOutStatus: 'Keluar', regu: 'A' },
-                { nid: "9120035BPN", name: "ANDI WIJAYA", position: "STAFF HR", company: "PT PLN NPS", photoUrl: "", inOutStatus: 'Keluar', regu: 'Daytime' }
-            ];
-            saveEmployees();
-        }
-        saveCompanies();
-    }
-
-    // --- FUNGSI MODAL ---
-    function openModal(modalElement) { if (modalElement) { modalElement.style.display = 'block'; document.body.classList.add('modal-open'); } }
-    function closeModal(modalElement = null) { if (modalElement) { modalElement.style.display = 'none'; } else { document.querySelectorAll('.modal').forEach(modal => { modal.style.display = 'none'; }); } document.body.classList.remove('modal-open'); if (clockInterval) { clearInterval(clockInterval); clockInterval = null; } }
-    
-    // --- FUNGSI NOTIFIKASI TOAST BARU ---
-    function showToast(message, isSuccess = true) {
-        if (!toastNotification) return;
-        toastNotification.textContent = message;
-        toastNotification.className = 'toast show';
-        if (isSuccess) {
-            toastNotification.style.backgroundColor = '#16a34a';
-        } else {
-            toastNotification.style.backgroundColor = '#dc2626';
-        }
-        setTimeout(() => {
-            toastNotification.className = 'toast';
-        }, 3000);
-    }
-
-    // ====================================================================
-    // KUMPULAN FUNGSI-FUNGSI UTAMA
-    // ====================================================================
-
-    function loadUserProfile() {
-        const profileName = sessionStorage.getItem('namaAkun') || 'Pengguna';
-        const profilePictureUrl = sessionStorage.getItem('fotoProfil') || `https://placehold.co/40x40/cccccc/333?text=${profileName.charAt(0)}`;
-        const nameElement = document.getElementById('profile-name');
-        const pictureElement = document.getElementById('profile-picture');
-        if (nameElement) nameElement.textContent = profileName;
-        if (pictureElement) pictureElement.src = profilePictureUrl;
-    }
-
-    function openEditProfileModal() {
-        const modal = document.getElementById('editProfileModal');
-        if (!modal) return;
-        const currentName = sessionStorage.getItem('namaAkun');
-        const currentPic = sessionStorage.getItem('fotoProfil');
-        document.getElementById('form-edit-name').value = currentName;
-        document.getElementById('profile-pic-preview').src = currentPic;
-        newProfilePicData = null;
-        openModal(modal);
-    }
-
-    function setupEditProfileListeners() {
-        const uploadBtn = document.getElementById('upload-pic-btn');
-        const fileInput = document.getElementById('new-profile-pic-input');
-        const form = document.getElementById('edit-profile-form');
-        const preview = document.getElementById('profile-pic-preview');
-
-        if (uploadBtn) {
-            uploadBtn.addEventListener('click', () => fileInput.click());
-        }
-        if (fileInput) {
-            fileInput.addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        preview.src = e.target.result;
-                        newProfilePicData = e.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-        }
-        if (form) {
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const newName = document.getElementById('form-edit-name').value;
-                sessionStorage.setItem('namaAkun', newName);
-                if (newProfilePicData) {
-                    sessionStorage.setItem('fotoProfil', newProfilePicData);
-                }
-                loadUserProfile();
-                closeModal(document.getElementById('editProfileModal'));
-                showToast('Profil berhasil diperbarui!');
-            });
-        }
-    }
-
-    function renderCompanyOptions() { const companySelect = document.getElementById('form-company'); if (companySelect) { companySelect.innerHTML = '<option value="">Pilih Company</option>' + companies.map(company => `<option value="${company}">${company}</option>`).join(''); } }
-
-    function toggleNotepad() {
-        const notepadContainer = document.getElementById('notepad-container');
-        if (!notepadContainer) return;
-        const isHidden = notepadContainer.style.display === 'none';
-        if (isHidden) {
-            notepadContainer.style.display = 'block';
-            const notepadTextarea = document.getElementById('notepad-textarea');
-            const saveBtn = document.getElementById('save-notepad-btn');
-            notepadTextarea.value = notepadContent;
-            saveBtn.onclick = function () {
-                notepadContent = notepadTextarea.value;
-                saveNotepadContent();
-                showToast('Catatan berhasil disimpan!');
-                notepadContainer.style.display = 'none';
-                const blinkingTextElement = document.getElementById('blinking-text');
-                if (blinkingTextElement && currentPageName === 'DASHBOARD') {
-                    blinkingTextElement.textContent = notepadContent.toUpperCase();
-                }
-            };
-        } else {
-            notepadContainer.style.display = 'none';
-        }
-    }
-
-function renderEmployeeManagementPage() {
-    contentBody.innerHTML = `
-        <div class="action-bar">
-            <button class="btn-secondary" data-action="open-monitoring"><i class="fas fa-chart-line"></i> Buka Monitoring</button>
-            <button class="btn-success" data-action="open-recap"><i class="fas fa-list"></i> Rekapitulasi</button>
-            <button id="btn-show-list" class="btn-primary" style="background: #0d2847; border-color: #fff;"><i class="fas fa-list-alt"></i> Manajemen Karyawan</button>
-            <button class="btn-primary" data-action="open-schedule-manager"><i class="fas fa-calendar-alt"></i> Atur Jadwal Shift</button>
-            <button class="btn-primary" data-action="toggle-notepad" style="background-color: #f59e0b;"><i class="fas fa-sticky-note"></i> Catatan Informasi</button>
-        </div>
-        <div id="notepad-container" class="notepad-container" style="display: none;">
-            <h4><i class="fas fa-book-open"></i> Catatan & Informasi Penting</h4>
-            <textarea id="notepad-textarea" class="notepad-textarea" placeholder="Tulis catatan atau ringkasan penting di sini..."></textarea>
-            <button id="save-notepad-btn" class="btn-success"><i class="fas fa-save"></i> Simpan Catatan</button>
-        </div>
-        <div id="employee-table-wrapper" style="display: none;"></div>
-    `;
-    const btnShowList = document.getElementById('btn-show-list');
-    if (btnShowList) {
-        btnShowList.addEventListener('click', () => {
-            const tableWrapper = document.getElementById('employee-table-wrapper');
-            if (!tableWrapper) return;
-            if (tableWrapper.style.display === 'none' || tableWrapper.innerHTML === '') {
-                tableWrapper.style.display = 'block';
-                const groupedEmployees = employees.reduce((acc, emp) => {
-                    (acc[emp.regu || 'Daytime'] = acc[emp.regu || 'Daytime'] || []).push(emp);
-                    return acc;
-                }, {});
-                let contentHTML = `
-                    <div class="action-bar" style="justify-content: flex-start;">
-                        <button class="btn-primary" data-action="add-employee"><i class="fas fa-plus"></i> Tambah Karyawan</button>
-                        <button class="btn-primary" data-action="manage-companies"><i class="fas fa-cog"></i> Kelola PT</button>
-                        <input type="file" id="excel-importer" style="display:none" accept=".xlsx, .xls">
-                        <button class="btn-primary" data-action="import-from-excel-btn"><i class="fas fa-file-import"></i> Impor dari Excel</button>
-                        <button class="btn-success" data-action="download-template"><i class="fas fa-file-download"></i> Download Template</button>
-                        <button class="btn-delete" data-action="delete-all" style="margin-left: auto;"><i class="fas fa-trash-alt"></i> Hapus Semua</button>
-                    </div>`;
-                if (employees.length > 0) {
-                    ['Daytime', 'A', 'B', 'C', 'D'].forEach(regu => {
-                        if (groupedEmployees[regu] && groupedEmployees[regu].length > 0) {
-                            contentHTML += `
-                                <div class="regu-group">
-                                    <h3 class="regu-header">Kelompok: ${regu}</h3>
-                                    <div class="employee-table-container">
-                                        <table class="employee-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>NID</th>
-                                                    <th>Nama</th>
-                                                    <th>Jobtitle</th>
-                                                    <th>Company</th>
-                                                    <th>Aksi</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                ${groupedEmployees[regu].map(emp => `
-                                                    <tr>
-                                                        <td>${emp.nid}</td>
-                                                        <td>${emp.name}</td>
-                                                        <td>${emp.position}</td>
-                                                        <td>${emp.company}</td>
-                                                        <td class="actions">
-                                                            <button class="btn-edit" data-action="edit-employee" data-nid="${emp.nid}"><i class="fas fa-edit"></i> Edit</button>
-                                                            <button class="btn-delete-action btn-delete" data-action="delete-employee" data-nid="${emp.nid}"><i class="fas fa-trash"></i> Hapus</button>
-                                                            <button class="btn-barcode" data-action="download-barcode" data-nid="${emp.nid}" data-name="${emp.name}"><i class="fas fa-qrcode"></i> Barcode</button>
-                                                        </td>
-                                                    </tr>
-                                                `).join('')}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>`;
-                        }
-                    });
-                } else {
-                    contentHTML += `<p style="text-align: center; margin-top: 20px; color: #64748b;">Belum ada data karyawan.</p>`;
-                }
-                tableWrapper.innerHTML = contentHTML;
-
-                // --- MEMPERBAIKI PENANGANAN EVENT UNTUK TOMBOL DINAMIS DI SINI ---
-                // Tambahkan event listener untuk tombol Impor dan Download Template
-                const importBtn = tableWrapper.querySelector('[data-action="import-from-excel-btn"]');
-                const downloadTemplateBtn = tableWrapper.querySelector('[data-action="download-template"]');
-                const excelImporterInput = document.getElementById('excel-importer');
-
-                if (importBtn) {
-                    importBtn.addEventListener('click', () => {
-                        excelImporterInput.click();
-                    });
-                    excelImporterInput.addEventListener('change', handleExcelImport);
-                }
-
-                if (downloadTemplateBtn) {
-                    downloadTemplateBtn.addEventListener('click', downloadExcelTemplate);
-                }
-                // --- AKHIR PERBAIKAN ---
-
-            } else {
-                tableWrapper.style.display = 'none';
-            }
-        });
-    }
+/* Reset dan Pengaturan Dasar */
+* {
+    margin: 1;
+    padding: 1;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+body {
+    background-color: #f4f6f9;
+    color: #334155;
+    line-height: 1.5;
+}
+.container {
+    display: flex;
+    min-height: 100vh;
+}
+/* --- Sidebar --- */
+.sidebar {
+    width: 260px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    overflow-y: auto; /* Memungkinkan konten di dalam sidebar untuk digulir jika terlalu panjang */
+    background: linear-gradient(180deg, #3469a4 0%, #1a3b5d 100%);
+    color: #e0e0e0;
+    padding: 15px;
+    box-shadow: 3px 0 15px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
 }
 
-    function renderMonitoringLog() { if (monitoringLogBody) { monitoringLogBody.innerHTML = monitoringLog.slice(0).reverse().map(log => `<tr><td>${new Date(log.timestamp).toLocaleTimeString('id-ID', { hour12: false })}</td><td>${log.name}</td><td>${log.nid}</td><td>${log.position}</td><td>${log.company}</td><td data-status="${log.status.toLowerCase()}">${log.status}</td><td class="log-keterangan">${log.keterangan || '-'}</td></tr>`).join(''); } }
-    
-    function openEmployeeForm(employeeData = null) {
-        employeeForm.reset();
-        document.getElementById('employee-index').value = employeeData ? employees.findIndex(e => e.nid === employeeData.nid) : '';
-        formPhotoInput.value = '';
-        renderCompanyOptions();
-        if (employeeData) {
-            formTitle.textContent = 'Edit Karyawan';
-            document.getElementById('form-nid').value = employeeData.nid;
-            document.getElementById('form-name').value = employeeData.name;
-            document.getElementById('form-position').value = employeeData.position;
-            document.getElementById('form-company').value = employeeData.company;
-            document.getElementById('form-regu').value = employeeData.regu || 'Daytime';
-            formPhotoPreview.src = employeeData.photoUrl || 'https://placehold.co/100x120/cccccc/333?text=Preview';
-        } else {
-            formTitle.textContent = 'Tambah Karyawan';
-            document.getElementById('form-nid').value = '';
-            document.getElementById('form-name').value = '';
-            document.getElementById('form-position').value = '';
-            document.getElementById('form-company').value = '';
-            document.getElementById('form-regu').value = 'Daytime';
-            formPhotoPreview.src = 'https://placehold.co/100x120/cccccc/333?text=Preview';
-        }
-        openModal(employeeFormModal);
+.sidebar .logo {
+    text-align: center;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.sidebar .logo-img {
+    width: 150px;
+    height: auto;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border: 2px solid #3b82f6;
+}
+.sidebar .logo h1 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 5px;
+}
+.sidebar .logo p {
+    font-size: 11px;
+    color: #a9c1d9;
+    font-weight: 300;
+}
+.sidebar .menu {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+.sidebar .menu ul {
+    list-style: none;
+    margin-top: 0;
+}
+.sidebar .menu ul li a {
+    display: block;
+    padding: 10px 15px;
+    color: #e0e0e0;
+    text-decoration: none;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-left: 3px solid transparent;
+}
+.sidebar .menu ul li a:hover {
+    background: rgba(26, 59, 93, 0.7);
+    color: #ffffff;
+    border-left: 3px solid #4ade80;
+}
+.sidebar .menu ul li a.active {
+    background: linear-gradient(90deg, #4ade80 0%, #22c55e 100%);
+    color: #0d2847;
+    font-weight: 600;
+    border-left: 3px solid #16a34a;
+}
+.profile-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 15px 10px;
+    margin-top: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+#logout-btn {
+    width: 85%;
+    margin: 15px auto;
+    display: block;
+    background: #dc2626;
+    color: white;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+}
+/* --- Main Content --- */
+.main-content {
+    flex: 1;
+    margin-left: 260px;
+    padding: 25px;
+    background: #ffffff;
+    position: relative;
+    z-index: 1;
+}
+.main-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('images/background-dashboard.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    opacity: 0.2;
+    z-index: -1;
+}
+.content-header {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eef2f7;
+    padding-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.content-header h2 {
+    color: #0d2847;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+}
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.nav-buttons {
+    display: flex;
+    gap: 5px;
+}
+.btn-nav {
+    background-color: #e2e8f0;
+    color: #475569;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+.btn-nav:hover {
+    background-color: #cbd5e1;
+    color: #1e293b;
+}
+.btn-nav:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.btn-primary, .btn-secondary, .btn-success, .btn-delete, .btn-danger-outline {
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+.btn-primary {
+    background: linear-gradient(135deg, #1a3b5d 0%, #2c5382 100%);
+    color: white;
+}
+.btn-secondary {
+    background-color: #64748b;
+    color: white;
+}
+.btn-success {
+    background-color: #16a34a;
+    color: white;
+}
+.btn-delete {
+    background: #dc2626;
+    color: white;
+}
+.btn-danger-outline {
+    background: none;
+    border: 1px solid #dc2626;
+    color: #dc2626;
+    padding: 8px 16px;
+}
+/* ===== TABEL KARYAWAN ===== */
+.action-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 10px;
+    background: #f8fafc;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.employee-table-container {
+    overflow: auto;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    margin-top: 15px;
+    border: 1px solid #e2e8f0;
+}
+.employee-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.employee-table thead {
+    position: sticky;
+    top: 0;
+    background: #e2e8f0;
+    z-index: 10;
+}
+.employee-table th,
+.employee-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 13px;
+}
+.employee-table th {
+    color: #475569;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+.employee-table td {
+    color: #334155;
+    font-weight: 500;
+}
+.employee-table tr:hover td {
+    background-color: #f1f5f9;
+}
+.employee-table .actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+.btn-edit, .btn-delete-action, .btn-barcode {
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.btn-edit { background: #f59e0b; }
+.btn-delete-action { background: #dc2626; }
+.btn-barcode { background: #8b5cf6; }
+.regu-group {
+    margin-bottom: 20px;
+}
+.regu-header {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #cbd5e1;
+}
+/* Style untuk Halaman Equipment Data */
+.equipment-options {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+.equipment-btn {
+    flex: 1;
+    padding: 20px;
+    font-size: 18px;
+    font-weight: 600;
+    border: 2px solid #0d2847;
+    background-color: #ffffff;
+    color: #0d2847;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+}
+.equipment-btn:hover, .equipment-btn.active {
+    background-color: #0d2847;
+    color: #ffffff;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+}
+.equipment-content-display {
+    padding: 20px;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    min-height: 30vh;
+    border: 1px solid #e2e8f0;
+}
+.maintenance-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 15px;
+    background-color: #eef2f7;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+.maintenance-btn {
+    flex-grow: 1;
+    padding: 10px 15px;
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid #94a3b8;
+    background-color: #ffffff;
+    color: #475569;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+.maintenance-btn:hover, .maintenance-btn.active {
+    background-color: #1a3b5d;
+    color: #ffffff;
+    border-color: #1a3b5d;
+}
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 1vh 1vw;
+    backdrop-filter: blur(3px);
+}
+.modal-content {
+    position: relative;
+    margin: auto;
+    max-width: 100%;
+}
+.modal-content.form-modal {
+    max-width: 450px;
+    background-color: #1a3b5d;
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 5vh auto;
+}
+.form-modal h3 {
+    color: #ffffff;
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 20px;
+    border-bottom: 1px solid #2c5382;
+    padding-bottom: 10px;
+}
+.form-group {
+    margin-bottom: 15px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #a9c1d9;
+    font-size: 13px;
+}
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #3b82f6;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: #0d2847;
+    color: white;
+}
+#form-photo-preview {
+    width: 80px;
+    height: 100px;
+    object-fit: cover;
+    border: 1px solid #3b82f6;
+    border-radius: 4px;
+    display: block;
+    margin-top: 8px;
+}
+#save-button {
+    width: 100%;
+    padding: 10px;
+    background: #22c55e;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+}
+/* --- Dasbor Monitoring & Rekapitulasi --- */
+.modal-xl .modal-content {
+    background: linear-gradient(135deg, #1d5ea8 0%, #1a3b5d 100%);
+    border-radius: 8px;
+    color: white;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    max-height: 97vh;
+    width: 100%;
+    max-width: 1800px;
+    margin: auto;
+    overflow-y: auto;
+}
+.monitoring-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.monitoring-header h3 { margin: 0; font-size: 18px; }
+.header-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 5;
+    font-size: 13px;
+}
+.header-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+.monitoring-body { display: flex; flex-direction: column; gap: 15px; }
+.monitoring-details { display: flex; gap: 15px; align-items: center; }
+.details-company-logo img { width: 60px; height: 60px; object-fit: contain; }
+.details-header { flex: 1; text-align: center; }
+.details-header span { font-size: 11px; color: #a9c1d9; }
+.details-header p { font-size: 16px; font-weight: 600; }
+.details-photo-frame { flex-shrink: 0; }
+.details-photo-frame img { width: 200px; height: 200px; object-fit: cover; border-radius: 8px; }
+.monitoring-info-stats { display: flex; gap: 15px; flex-wrap: wrap; }
+.info-grid, .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; flex: 1; }
+.info-item, .stat-box { padding: 10px; border-radius: 8px; text-align: center; background: rgba(255,255,255,0.05); }
+.info-item span, .stat-box span { display: block; font-size: 12px; margin-bottom: 3px; }
+.info-item p, .stat-box p { font-size: 20px; font-weight: 600; }
+.scan-input-area { display: flex; gap: 8px; margin-bottom: 15px; }
+.scan-input-area input { flex: 1; padding: 10px; border: none; border-radius: 4px; font-size: 14px; background-color: #d1d5db; color: #333; }
+.scan-input-area button { padding: 10px 15px; background: #4ade80; color: #0d2847; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 14px; }
+.monitoring-table { width: 100%; border-collapse: collapse; }
+.monitoring-table th, .monitoring-table td { padding: 10px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; }
+.monitoring-table th { font-size: 11px; text-transform: uppercase; }
+.monitoring-table td { color: #ffffff; }
+.k3-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.k3-box { padding: 15px; border-radius: 8px; text-align: center; position: relative; }
+.k3-box span { display: block; font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.k3-box p { font-size: 24px; font-weight: 700; }
+.k3-box.yellow { background: #ffc107; color: #0d2847; }
+.k3-box.red { background: #dc3545; color: #ffffff; }
+.k3-box.blue { background: #0dcaf0; color: #ffffff; }
+.k3-box.orange { background: #fd7e14; color: #ffffff; }
+[data-status="masuk"] { color: #22c55e; font-weight: 600; }
+[data-status="keluar"] { color: #ef4444; font-weight: 600; }
+.log-keterangan { font-weight: bold; color: #f59e0b; }
+.schedule-controls { display: flex; gap: 8px; align-items: center; }
+.schedule-controls select { padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 13px; }
+.schedule-table-container { overflow: auto; background-color: #ffffff; padding: 8px; border-radius: 8px; margin-top: 10px; max-height: 60vh; }
+.schedule-table { width: 100%; border-collapse: collapse; color: #333; }
+.schedule-table th, .schedule-table td { border: 1px solid #ddd; padding: 6px; text-align: center; min-width: 100px; font-size: 12px; }
+.schedule-table th { background-color: #f2f2f2; font-weight: 600; position: sticky; top: 0; z-index: 1; }
+.schedule-table td.date-cell { font-weight: bold; background-color: #f8f9fa; position: sticky; left: 0; z-index: 1;}
+.schedule-select { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.schedule-select option[value="Pagi"] { background-color: #a7f3d0; }
+.schedule-select option[value="Sore"] { background-color: #fde68a; }
+.schedule-select option[value="Malam"] { background-color: #a5b4fc; }
+.schedule-select option[value="Libur"] { background-color: #fecaca; }
+.modal-fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10000;
+    background: #0d2847;
+    padding: 0;
+}
+.modal-fullscreen .modal-content {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    margin: 0;
+    border-radius: 0;
+}
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+.k3-box span {
+    animation: blink 1.5s infinite;
+}
+.modal-xl .modal-content .details-company-logo img {
+    width: 300px !important;
+    height: 80px !important;
+    object-fit: contain;
+    border-radius: 4px;
+}
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 10px 0;
+    border-bottom: 1px solid #eef2f7;
+}
+.dashboard-header h2 {
+    color: #0d2847;
+    font-size: 24px;
+    margin: 0;
+}
+.summary-container {
+    min-height: 300px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 15px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.summary-placeholder {
+    color: #64748b;
+    font-size: 16px;
+    text-align: center;
+}
+.summary-content {
+    text-align: center;
+    width: 100%;
+}
+.summary-content h3 {
+    color: #0d2847;
+    margin-bottom: 15px;
+    font-size: 20px;
+}
+.summary-content p {
+    font-size: 16px;
+    margin: 8px 0;
+    color: #334155;
+}
+.summary-content strong {
+    color: #1a3b5d;
+}
+.options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
+}
+.option-btn {
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    font-weight: 600;
+}
+.option-btn:hover {
+    background: #1a3b5d;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+#optionsModal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 1vh 1vw;
+    backdrop-filter: blur(3px);
+}
+#optionsModal .modal-content {
+    max-width: 500px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    color: #334155;
+}
+.hr-dashboard-container {
+    width: 100%;
+    padding: 0;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+}
+.hr-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 15px;
+}
+.kpi-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid #eef2f7;
+}
+.kpi-card .icon {
+    font-size: 24px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+}
+.kpi-card .icon.total-emp { background-color: #3B82F6; }
+.kpi-card .icon.active-today { background-color: #10B981; }
+.kpi-card .icon.safety-score { background-color: #F59E0B; }
+.kpi-card .info .number {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1E293B;
+}
+.kpi-card .info .label {
+    font-size: 13px;
+    color: #64748B;
+}
+.kpi-card .icon.active-shift {
+    background-color: #6366F1;
+}
+.chart-wrapper {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eef2f7;
+}
+.chart-wrapper h3 {
+    font-size: 16px;
+    color: #1E293B;
+    margin-bottom: 15px;
+}
+.chart-container {
+    position: relative;
+    height: 250px;
+    width: 100%;
+}
+.hr-main-content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 15px;
+    margin-top: 15px;
+}
+.activity-feed, .video-container {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid #eef2f7;
+}
+.activity-feed h3, .video-container h3 {
+    font-size: 16px;
+    color: #1E293B;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eef2f7;
+    padding-bottom: 10px;
+}
+.activity-feed ul {
+    list-style: none;
+    max-height: 300px;
+    overflow-y: auto;
+}
+.activity-feed li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eef2f7;
+}
+.activity-feed li:last-child {
+    border-bottom: none;
+}
+.activity-feed .detail .name {
+    font-weight: 600;
+    color: #334155;
+    font-size: 13px;
+}
+.activity-feed .detail .time {
+    font-size: 11px;
+    color: #64748B;
+}
+.activity-feed .status {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+.status.masuk { background-color: #d1fae5; color: #059669; }
+.status.keluar { background-color: #fee2e2; color: #dc2626; }
+.video-wrapper {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background-color: #000;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.video-wrapper video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+#hr-fullscreen-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    z-index: 10;
+    background-color: #e2e8f0;
+    color: #475569;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+.hr-dashboard-fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 5000;
+    background-color: #f4f6f9;
+    padding: 20px;
+    overflow-y: auto;
+}
+.activity-feed .status-wrapper {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+.activity-feed .keterangan-status {
+    background-color: #fde68a;
+    color: #b45309;
+}
+.k3-stats-dashboard {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eef2f7;
+}
+.k3-stats-dashboard h3 {
+    font-size: 16px;
+    color: #1E293B;
+    margin-bottom: 15px;
+}
+.k3-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+.k3-card {
+    color: #ffffff;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+}
+.k3-card span {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+.k3-card p {
+    font-size: 20px;
+    font-weight: 700;
+}
+.bottom-widgets {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
+.bottom-widgets > .k3-stats-dashboard {
+    flex: 1;
+}
+.bottom-widgets > .chart-wrapper {
+    flex: 0 0 300px;
+}
+.k3-card.yellow { background-color: #f59e0b; }
+.k3-card.red { background-color: #ef4444; }
+.k3-card.blue { background-color: #3b82f6; }
+.k3-card.orange { background-color: #f97316; }
+.marquee-container {
+    width: 100%;
+    background-color: #fde047;
+    color: #0e0d0d;
+    padding: 10px 0;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    overflow: hidden;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(6, 170, 235, 0.1);
+}
+.marquee-container p {
+    display: inline-block;
+    padding-left: 100%;
+    animation: scroll-left 30s linear infinite;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 16px;
+}
+@keyframes scroll-left {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+}
+.profile-link {
+    text-decoration: none;
+    display: block;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+.profile-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+.profile-picture-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+#profile-pic-preview {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #e2e8f0;
+}
+.picture-buttons {
+    display: flex;
+    gap: 8px;
+}
+.btn-delete-outline {
+    background: none;
+    border: 1px solid #dc2626;
+    color: #dc2626;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+}
+.form-actions {
+    margin-top: 20px;
+    text-align: right;
+}
+#save-profile-btn {
+    background-color: #0d2847;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+}
+.hidden {
+    display: none !important;
+}
+/* ===== STYLE KALKULATOR CO-FIRING ===== */
+.kalkulator-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: #ffffff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+}
+.kalkulator-container h1 {
+    text-align: center;
+    color: #0d2847;
+    margin-bottom: 8px;
+    font-size: 24px;
+}
+.kalkulator-container p.deskripsi {
+    text-align: center;
+    color: #64748b;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+.kalkulator-container .form-section {
+    margin-bottom: 1.2em;
+    border-top: 1px solid #eef2f7;
+    padding-top: 0.8em;
+}
+.kalkulator-container .form-section h3 {
+    color: #1a3b5d;
+    font-size: 16px;
+    margin-bottom: 1em;
+}
+.kalkulator-container .input-group {
+    margin-bottom: 1em;
+}
+.kalkulator-container .input-group label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: #475569;
+    font-size: 13px;
+}
+.kalkulator-container .input-group input, .kalkulator-container .input-group select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+    background-color: #f8fafc;
+}
+.kalkulator-container .input-group input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+}
+.hasil-container {
+    padding: 20px;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+.hasil-container h2 {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 20px;
+}
+.hasil-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eef2f7;
+    font-size: 14px;
+}
+.hasil-item:last-child {
+    border-bottom: none;
+}
+.hasil-item p {
+    margin: 0;
+    font-weight: 600;
+    color: #334155;
+}
+.hasil-item span {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #0d2847;
+}
+.hasil-item.highlight {
+    background-color: #e6f7f0;
+    padding: 8px 12px;
+    margin: 5px -12px;
+    border-radius: 6px;
+}
+.hasil-item.highlight p {
+    color: #065f46;
+}
+.hasil-item.highlight span {
+    color: #10b981;
+}
+.parameter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+#blok-beban-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.blok-beban-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: #f8fafc;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+.blok-beban-item .input-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+.blok-beban-item .input-group label {
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 3px;
+}
+.blok-nomor {
+    font-weight: 600;
+    color: #475569;
+    min-width: 40px;
+    font-size: 14px;
+}
+.btn-hapus-blok {
+    background-color: #fee2e2;
+    color: #ef4444;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 30px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+.btn-hapus-blok:hover {
+    background-color: #ef4444;
+    color: white;
+}
+.rincian-body {
+    padding: 10px;
+    background-color: #ffffff;
+    color: #334155;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+.rincian-section {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+.rincian-section h4 {
+    color: #0d2847;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 8px;
+    font-size: 16px;
+}
+.rincian-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+.calc-step {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #eef2f7;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.calc-step:last-child {
+    border-bottom: none;
+}
+.calc-step p {
+    margin: 0;
+    font-size: 12px;
+}
+.calc-formula, .calc-result {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: right;
+}
+.calc-result {
+    color: #16a34a;
+    background-color: #e6f7f0;
+    padding: 4px 8px;
+    border-radius: 4px;
+    min-width: 80px;
+    text-align: right;
+}
+.rincian-section.final-results .calc-result {
+    color: #0d2847;
+    background-color: #e2e8f0;
+    font-size: 14px;
+}
+@media (max-width: 992px) {
+    .rincian-grid {
+        grid-template-columns: 1fr;
     }
-    
-    function handleEmployeeFormSubmit(event) {
-        event.preventDefault();
-        const index = document.getElementById('employee-index').value;
-        const photoUrl = formPhotoPreview.src.startsWith('data:image') ? formPhotoPreview.src : (index !== '' && employees[index] ? employees[index].photoUrl : '');
-        const employeeData = { nid: document.getElementById('form-nid').value.trim().toUpperCase(), name: document.getElementById('form-name').value.trim().toUpperCase(), position: document.getElementById('form-position').value.trim().toUpperCase(), company: document.getElementById('form-company').value, regu: document.getElementById('form-regu').value, photoUrl, inOutStatus: (index !== '' && employees[index]) ? employees[index].inOutStatus : 'Keluar' };
-        if (index === '' && employees.some(emp => emp.nid === employeeData.nid)) { showToast(`NID "${employeeData.nid}" sudah ada.`, false); return; }
-        if (index !== '') { employees[index] = employeeData; } else { employees.push(employeeData); }
-        saveEmployees();
-        closeModal(employeeFormModal);
-        showToast(`Data karyawan "${employeeData.name}" berhasil disimpan.`);
-        const tableWrapper = document.getElementById('employee-table-wrapper');
-        if (tableWrapper && tableWrapper.style.display !== 'none') {
-            tableWrapper.innerHTML = '';
-            document.getElementById('btn-show-list').click();
-            document.getElementById('btn-show-list').click();
-        }
-    }
-    
-    function manageCompanies() {
-        const companyList = companies.map((c, i) => `${i + 1}. ${c}`).join('\n');
-        const action = prompt(`Daftar Perusahaan:\n${companyList}\nKetik 'T' untuk TAMBAH, atau 'H' untuk HAPUS:`);
-        if (!action) return;
-        if (action.trim().toUpperCase() === 'T') { const newCompany = prompt("Masukkan nama PT baru:"); if (newCompany && newCompany.trim()) { companies.push(newCompany.trim()); saveCompanies(); showToast(`PT "${newCompany}" berhasil ditambahkan.`); } }
-        else if (action.trim().toUpperCase() === 'H') { const index = parseInt(prompt("Masukkan nomor PT yang akan dihapus:")) - 1; if (!isNaN(index) && index >= 0 && index < companies.length) { if (confirm(`Yakin ingin menghapus PT "${companies[index]}"?`)) { companies.splice(index, 1); saveCompanies(); showToast(`PT berhasil dihapus.`); } } else { showToast("Nomor PT tidak valid.", false); } }
-    }
-    
-    function handleExcelImport(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                let importedCount = 0;
-                json.forEach(row => {
-                    const upperCaseRow = Object.fromEntries(Object.entries(row).map(([k, v]) => [String(k).toUpperCase(), v]));
-                    if (upperCaseRow.NID && upperCaseRow.NAMA && upperCaseRow.JOBTITLE && upperCaseRow.COMPANY && upperCaseRow.REGU) { const nid = String(upperCaseRow.NID).toUpperCase(); if (!employees.some(emp => emp.nid === nid)) { employees.push({ nid, name: String(upperCaseRow.NAMA).toUpperCase(), position: String(upperCaseRow.JOBTITLE).toUpperCase(), company: String(upperCaseRow.COMPANY), regu: String(upperCaseRow.REGU), photoUrl: '', inOutStatus: 'Keluar' }); importedCount++; } }
-                });
-                if (importedCount > 0) { saveEmployees(); navigateTo('HUMAN RESOURCE PERFORMANCE'); showToast(`${importedCount} data karyawan berhasil diimpor!`); } else { showToast("Tidak ada data baru. Pastikan format kolom: NID, NAMA, JOBTITLE, COMPANY, REGU.", false); }
-            } catch (error) { showToast("Gagal memproses file.", false); console.error(error); }
-        };
-        reader.readAsArrayBuffer(file);
-    }
-    
-    function downloadExcelTemplate() { const ws = XLSX.utils.json_to_sheet([{ NID: "CONTOH123", NAMA: "NAMA KARYAWAN", JOBTITLE: "POSISI JABATAN", COMPANY: "PT PLN NPS", REGU: "A" }]); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Template Data Karyawan"); XLSX.writeFile(wb, "Template_Impor_Karyawan.xlsx"); }
-    function downloadBarcode(nid, name) { try { const qr = qrcode(0, 'L'); qr.addData(nid); qr.make(); const link = document.createElement("a"); link.href = qr.createDataURL(8, 8); link.download = `qrcode-${name.replace(/ /g, '_')}-${nid}.png`; link.click(); } catch (e) { console.error("Error membuat QR Code:", e); } }
-    function updateClock() { if (clockElement) clockElement.textContent = new Date().toLocaleString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\./g, ':'); }
-    function updateEmployeeDetails(employee) { if (detailsPhoto) { detailsPhoto.src = employee.photoUrl || `https://placehold.co/300x400/cccccc/333?text=${employee.name.split(' ')[0]}`; detailsName.textContent = employee.name; detailsNid.textContent = employee.nid; detailsPosition.textContent = employee.position; detailsStatus.textContent = employee.inOutStatus.toUpperCase(); detailsCompanyLogoImg.src = companyLogos[employee.company] || 'https://placehold.co/100x100/ffffff/333?text=Logo'; } }
-    function updateManpowerStats() { if (statPlnNps) { const count = companies.reduce((acc, company) => ({ ...acc, [company]: 0 }), {}); employees.forEach(emp => { if (emp.inOutStatus === 'Masuk' && count[emp.company] !== undefined) count[emp.company]++; }); statPlnNps.textContent = count["PT PLN NPS"] || 0; statMkp.textContent = count["PT MKP"] || 0; statMkpIc.textContent = count["MKP IC"] || 0; statSecurity.textContent = count["SECURITY"] || 0; statVisitor.textContent = count["Visitor"] || 0; } }
-    function addLogEntry(employee, status, keterangan = '-') {
-        const newLogEntry = { timestamp: new Date().toISOString(), name: employee.name, nid: employee.nid, position: employee.position, company: employee.company, status, keterangan };
-        monitoringLog.unshift(newLogEntry);
-        renderMonitoringLog();
-        localStorage.setItem('monitoringLog', JSON.stringify(monitoringLog));
-        // Versi yang sudah diperbaiki
-        if (monitoringLog.length >= 5) { recapLog.unshift(...monitoringLog); saveRecapLog(); monitoringLog = []; localStorage.removeItem('monitoringLog'); }
-    }
-    function processScan() {
-        if (!nidScannerInput) return;
-        const nidToFind = nidScannerInput.value.trim().toUpperCase();
-        if (!nidToFind) return;
-        const employee = employees.find(emp => emp.nid.toUpperCase() === nidToFind);
-        if (!employee) { nidScannerInput.value = ""; nidScannerInput.focus(); showToast(`Error: Karyawan dengan NID "${nidToFind}" tidak ditemukan.`, false); return; }
-        scanSound.play();
-        const newStatus = employee.inOutStatus === 'Masuk' ? 'Keluar' : 'Masuk';
-        employee.inOutStatus = newStatus;
-        let keterangan = '-';
-        if (newStatus === 'Masuk') {
-            const now = new Date();
-            const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            const employeeRegu = employee.regu || 'Daytime';
-            const shiftForToday = (employeeRegu === 'Daytime') ? 'Daytime' : (monthlySchedule[todayKey] ? monthlySchedule[todayKey][employeeRegu] : '');
-            if (shiftForToday && shiftForToday !== 'Libur' && shiftRules[shiftForToday]) { const rule = shiftRules[shiftForToday].start; if ((now.getHours() * 60 + now.getMinutes()) > (rule.hour * 60 + rule.minute)) { keterangan = 'Terlambat'; lateSound.play(); } } else { keterangan = (shiftForToday === 'Libur') ? 'Hari Libur' : 'Jadwal Belum Diatur'; }
-        }
-        updateEmployeeDetails(employee);
-        addLogEntry(employee, newStatus, keterangan);
-        updateManpowerStats();
-        saveEmployees();
-        nidScannerInput.value = "";
-        nidScannerInput.focus();
-    }
-    function openMonitoringDashboard() { openModal(monitoringModal); updateClock(); updateManpowerStats(); if (clockInterval) clearInterval(clockInterval); clockInterval = setInterval(updateClock, 1000); if (nidScannerInput) nidScannerInput.focus(); }
-    function renderRecapTable() { if (recapLogBody) { recapLog.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); recapLogBody.innerHTML = recapLog.map(log => `<tr><td>${new Date(log.timestamp).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'medium' })}</td><td>${log.name}</td><td>${log.nid}</td><td>${log.position}</td><td>${log.company}</td><td>${log.status}</td><td class="log-keterangan">${log.keterangan || '-'}</td></tr>`).join(''); } }
-    function openRecapModal() { renderRecapTable(); openModal(recapModal); }
-    function downloadRecapExcel() { if (recapLog.length === 0) { showToast("Tidak ada data rekap untuk diunduh.", false); return; } const dataForExcel = recapLog.map(log => ({ Waktu: new Date(log.timestamp).toLocaleString('id-ID'), Nama: log.name, NID: log.nid, Jobtitle: log.position, Company: log.company, Status: log.status, Keterangan: log.keterangan || '-' })); const ws = XLSX.utils.sheet_add_json(XLSX.utils.json_to_sheet([]), dataForExcel); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Rekap Aktivitas"); XLSX.writeFile(wb, `Rekap_Aktivitas_${new Date().toISOString().slice(0, 10)}.xlsx`); }
-    function clearRecapData() { if ((recapLog.length > 0 || monitoringLog.length > 0) && confirm("Yakin ingin menghapus SEMUA data rekapitulasi DAN log monitoring?")) { recapLog = []; saveRecapLog(); monitoringLog = []; if (monitoringLogBody) monitoringLogBody.innerHTML = ''; localStorage.removeItem('monitoringLog'); employees.forEach(emp => emp.inOutStatus = 'Keluar'); saveEmployees(); navigateTo('HUMAN RESOURCE PERFORMANCE'); showToast("Data rekapitulasi dan log monitoring telah dihapus."); } }
-    function toggleFullscreen() { isFullscreen = !isFullscreen; if (monitoringModal) { monitoringModal.classList.toggle('modal-fullscreen', isFullscreen); toggleFullscreenBtn.innerHTML = isFullscreen ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>'; } }
-    function openShiftScheduleManager(targetMonth, targetYear) {
-        if (!shiftScheduleModal) return;
-        const now = new Date();
-        const month = targetMonth !== undefined ? targetMonth : now.getMonth();
-        const year = targetYear !== undefined ? targetYear : now.getFullYear();
-        const monthSelect = document.getElementById('month-select');
-        const yearSelect = document.getElementById('year-select');
-        yearSelect.innerHTML = Array.from({ length: 5 }, (_, i) => year - 2 + i).map(y => `<option value="${y}" ${y === year ? 'selected' : ''}>${y}</option>`).join('');
-        monthSelect.innerHTML = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"].map((name, i) => `<option value="${i}" ${i === month ? 'selected' : ''}>${name}</option>`).join('');
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        let tableHTML = `<thead><tr><th>Tanggal</th><th>Regu A</th><th>Regu B</th><th>Regu C</th><th>Regu D</th></tr></thead><tbody>`;
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const scheduleForDay = monthlySchedule[dateKey] || {};
-            tableHTML += `<tr><td class="date-cell">${day}</td>` + ['A', 'B', 'C', 'D'].map(regu => `<td><select class="schedule-select" data-date="${dateKey}" data-regu="${regu}">${['Pagi', 'Sore', 'Malam', 'Libur'].map(shift => `<option value="${shift}" ${(scheduleForDay[regu] || 'Pagi') === shift ? 'selected' : ''}>${shift}</option>`).join('')}</select></td>`).join('') + `</tr>`;
-        }
-        document.getElementById('schedule-table').innerHTML = tableHTML + `</tbody>`;
-        monthSelect.onchange = () => openShiftScheduleManager(parseInt(monthSelect.value), parseInt(yearSelect.value));
-        yearSelect.onchange = () => openShiftScheduleManager(parseInt(monthSelect.value), parseInt(yearSelect.value));
-        openModal(shiftScheduleModal);
-    }
-    function openShiftTimesManager() {
-        if (!shiftTimesModal) return;
-        Object.entries(shiftRules).forEach(([shiftName, rule]) => {
-            const name = shiftName.toLowerCase();
-            document.getElementById(`${name}-start-hour`).value = String(rule.start.hour).padStart(2, '0');
-            document.getElementById(`${name}-start-minute`).value = String(rule.start.minute).padStart(2, '0');
-            document.getElementById(`${name}-end-hour`).value = String(rule.end.hour).padStart(2, '0');
-            document.getElementById(`${name}-end-minute`).value = String(rule.end.minute).padStart(2, '0');
-        });
-        openModal(shiftTimesModal);
-    }
-    function handleSaveSchedule() {
-        document.querySelectorAll('.schedule-select').forEach(select => {
-            const { date, regu } = select.dataset;
-            if (!monthlySchedule[date]) monthlySchedule[date] = {};
-            monthlySchedule[date][regu] = select.value;
-        });
-        saveSchedule();
-        showToast('Jadwal berhasil disimpan!');
-    }
-    function handleSaveShiftTimes() {
-        ['Pagi', 'Sore', 'Malam', 'Daytime'].forEach(shift => {
-            const name = shift.toLowerCase();
-            shiftRules[shift].start = { hour: parseInt(document.getElementById(`${name}-start-hour`).value), minute: parseInt(document.getElementById(`${name}-start-minute`).value) };
-            shiftRules[shift].end = { hour: parseInt(document.getElementById(`${name}-end-hour`).value), minute: parseInt(document.getElementById(`${name}-end-minute`).value) };
-        });
-        saveShiftRules();
-        showToast('Jam kerja berhasil disimpan!');
-        closeModal(shiftTimesModal);
-    }
-
-    function updateActiveShiftDisplay() {
-        const displayElement = document.getElementById('active-shift-display');
-        if (!displayElement) return;
-        const now = new Date();
-        const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        const scheduleForDay = monthlySchedule[todayKey];
-        let activeRegu = null;
-        if (scheduleForDay) {
-            for (const regu of ['A', 'B', 'C', 'D']) {
-                const shiftName = scheduleForDay[regu];
-                if (shiftName && shiftName !== 'Libur') {
-                    const rule = shiftRules[shiftName];
-                    const startTime = new Date();
-                    startTime.setHours(rule.start.hour, rule.start.minute, 0, 0);
-                    const endTime = new Date();
-                    endTime.setHours(rule.end.hour, rule.end.minute, 0, 0);
-                    if (endTime < startTime) {
-                        if (now < endTime || now >= startTime) {
-                            activeRegu = regu;
-                            break;
-                        }
-                    } else {
-                        if (now >= startTime && now < endTime) {
-                            activeRegu = regu;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        const numberElement = displayElement.querySelector('.number');
-        if (numberElement) {
-            if (activeRegu) {
-                numberElement.textContent = `REGU ${activeRegu}`;
-            } else {
-                numberElement.textContent = 'ISTIRAHAT';
-            }
-        }
-    }
-    
-    function loadDummyData() {
-        if (employees.length > 5) {
-            showToast("Dummy data sudah dimuat.", false);
-            return;
-        }
-    
-        const dummyEmployees = [
-            { nid: "1001", name: "BUDI SANTOSO", position: "OPERATOR BOILER", company: "PT PLN NPS", photoUrl: "", inOutStatus: 'Keluar', regu: 'A' },
-            { nid: "1002", name: "SITI AMINAH", position: "SUPERVISOR MEKANIK", company: "PT MKP", photoUrl: "", inOutStatus: 'Masuk', regu: 'B' },
-            { nid: "1003", name: "JOKO SUSILO", position: "STAFF ELEKTRIK", company: "PT PLN NPS", photoUrl: "", inOutStatus: 'Keluar', regu: 'C' },
-            { nid: "1004", name: "MARYAM WIJAYA", position: "HR SPV", company: "MKP IC", photoUrl: "", inOutStatus: 'Keluar', regu: 'Daytime' },
-            { nid: "1005", name: "DEDY PRASETYO", position: "SECURITY", company: "SECURITY", photoUrl: "", inOutStatus: 'Masuk', regu: 'D' },
-            { nid: "1006", name: "EKA PUTRI", position: "INSTRUMENT ENGR", company: "PT PLN NPS", photoUrl: "", inOutStatus: 'Keluar', regu: 'A' },
-            { nid: "1007", name: "FAJAR HERMAWAN", position: "KOORDINATOR OPERASI", company: "PT MKP", photoUrl: "", inOutStatus: 'Masuk', regu: 'B' },
-            { nid: "1008", name: "GINA LESTARI", position: "STAFF KEUANGAN", company: "MKP IC", photoUrl: "", inOutStatus: 'Keluar', regu: 'Daytime' },
-            { nid: "1009", name: "HADI RAHMAN", position: "K3L OFFICER", company: "PT PLN NPS", photoUrl: "", inOutStatus: 'Keluar', regu: 'C' },
-        ];
-        employees = [...employees, ...dummyEmployees];
-        saveEmployees();
-        showToast("Dummy data berhasil ditambahkan!", true);
-    }
-    
-    function setupRenewableEnergyTabs() {
-        const submenuBtns = document.querySelectorAll('.submenu-btn');
-        const contentSections = document.querySelectorAll('.re-content-section');
-
-        submenuBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                submenuBtns.forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                const targetId = this.dataset.target;
-                contentSections.forEach(section => {
-                    section.style.display = (section.id === targetId) ? 'block' : 'none';
-                });
-            });
-        });
-        
-        setupKalkulatorFluktuatifListeners();
-        setupReferensiListeners();
-    }
-    
-    function setupMasterDataTabs() {
-        const submenuBtns = contentBody.querySelectorAll('.submenu-bar .submenu-btn');
-        const contentSections = contentBody.querySelectorAll('.re-content-section');
-        const daftarBarangContent = contentBody.querySelector('#daftar-barang-content');
-    
-        submenuBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                submenuBtns.forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                const targetId = this.dataset.target;
-                contentSections.forEach(section => {
-                    section.style.display = 'none';
-                });
-                const targetSection = contentBody.querySelector('#' + targetId);
-                if (targetSection) {
-                    targetSection.style.display = 'block';
-                }
-            });
-        });
-    }
-
-    function setupKalkulatorFluktuatifListeners() {
-        const tambahBtn = document.getElementById('tambah-blok-btn');
-        const hitungBtn = document.getElementById('hitung-fluktuatif-btn');
-        const container = document.getElementById('blok-beban-container');
-        const rincianBtn = document.getElementById('lihat-rincian-btn');
-        
-        const jenisBatubaraSelect = document.getElementById('jenis-batubara');
-        const jenisBiomassaSelect = document.getElementById('jenis-biomassa');
-        const kalorBatubaraInput = document.getElementById('kalorBatubara');
-        const hargaBatubaraInput = document.getElementById('hargaBatubara');
-        const karbonBatubaraInput = document.getElementById('karbonBatubara');
-        const sulfurBatubaraInput = document.getElementById('sulfurBatubara');
-        
-        const kalorBiomassaInput = document.getElementById('kalorBiomassa');
-        const hargaBiomassaInput = document.getElementById('hargaBiomassa');
-        const sulfurBiomassaInput = document.getElementById('sulfurBiomassa');
-
-        const unitRadios = document.querySelectorAll('input[name="unit-pembangkit"]');
-        const efisiensiInput = document.getElementById('efisiensi');
-
-        if (tambahBtn) {
-            tambahBtn.addEventListener('click', tambahBlokBeban);
-        }
-        if (hitungBtn) {
-            hitungBtn.addEventListener('click', hitungFluktuatif);
-        }
-        if(rincianBtn){
-            rincianBtn.addEventListener('click', tampilkanRincianPerhitungan);
-        }
-        if (container) {
-            container.addEventListener('click', function(e) {
-                if (e.target && (e.target.classList.contains('btn-hapus-blok') || e.target.parentElement.classList.contains('btn-hapus-blok'))) {
-                    e.target.closest('.blok-beban-item').remove();
-                }
-            });
-            
-            if(container.children.length === 0) {
-                tambahBlokBeban();
-            }
-        }
-
-        if(unitRadios.length > 0){
-             unitRadios.forEach(radio => {
-                 radio.addEventListener('change', function() {
-                     const selectedUnitData = dataUnitPembangkit[this.value];
-                     if (selectedUnitData) {
-                         efisiensiInput.value = selectedUnitData.efisiensi;
-                     }
-                 });
-             });
-             document.querySelector('input[name="unit-pembangkit"]:checked').dispatchEvent(new Event('change'));
-        }
-
-        if(jenisBatubaraSelect && jenisBiomassaSelect){
-            for(const jenis in dataBatuBara){
-                jenisBatubaraSelect.options[jenisBatubaraSelect.options.length] = new Option(jenis, jenis);
-            }
-            for(const jenis in dataBiomassa){
-                jenisBiomassaSelect.options[jenisBiomassaSelect.options.length] = new Option(jenis, jenis);
-            }
-            
-            jenisBatubaraSelect.addEventListener('change', function(){
-                const selectedData = dataBatuBara[this.value];
-                if(selectedData){
-                    kalorBatubaraInput.value = selectedData.kalor;
-                    hargaBatubaraInput.value = selectedData.harga;
-                    karbonBatubaraInput.value = selectedData.karbon;
-                    document.getElementById('moistureBatubara').value = selectedData.moisture;
-                    document.getElementById('ashBatubara').value = selectedData.ash;
-                    sulfurBatubaraInput.value = selectedData.sulfur;
-                }
-            });
-            
-            jenisBiomassaSelect.addEventListener('change', function(){
-                const selectedData = dataBiomassa[this.value];
-                if(selectedData){
-                    kalorBiomassaInput.value = selectedData.kalor;
-                    hargaBiomassaInput.value = selectedData.harga;
-                    document.getElementById('moistureBiomassa').value = selectedData.moisture;
-                    document.getElementById('ashBiomassa').value = selectedData.ash;
-                    sulfurBiomassaInput.value = selectedData.sulfur;
-                }
-            });
-
-            jenisBatubaraSelect.dispatchEvent(new Event('change'));
-            jenisBiomassaSelect.dispatchEvent(new Event('change'));
-        }
-    }
-
-    function tambahBlokBeban() {
-        const container = document.getElementById('blok-beban-container');
-        const newBlock = document.createElement('div');
-        newBlock.classList.add('blok-beban-item');
-        
-        const blockNumber = container.children.length + 1;
-
-        newBlock.innerHTML = `
-            <span class="blok-nomor">Blok ${blockNumber}</span>
-            <div class="input-group">
-                <label>Beban Rata-rata (MW)</label>
-                <input type="number" class="input-beban" placeholder="Contoh: 6">
-            </div>
-            <div class="input-group">
-                <label>Jam Operasi (per Tahun)</label>
-                <input type="number" class="input-jam" placeholder="Contoh: 4000">
-            </div>
-            <button type="button" class="btn-hapus-blok" title="Hapus Blok Ini">&times;</button>
-        `;
-        container.appendChild(newBlock);
-    }
-
-    function hitungFluktuatif() {
-        function formatAngka(angka, desimal = 0) {
-            return new Intl.NumberFormat('id-ID', { maximumFractionDigits: desimal }).format(angka);
-        }
-        function formatRupiah(angka) {
-            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
-        }
-
-        const rincianBtn = document.getElementById('lihat-rincian-btn');
-        
-        const efisiensi = parseFloat(document.getElementById('efisiensi').value) / 100;
-        const persenCoFiring = parseFloat(document.getElementById('persenCoFiring').value) / 100;
-
-        const kalorBatubara = parseFloat(document.getElementById('kalorBatubara').value);
-        const hargaBatubara = parseFloat(document.getElementById('hargaBatubara').value);
-        const karbonBatubara = parseFloat(document.getElementById('karbonBatubara').value) / 100;
-        const sulfurBatubara = parseFloat(document.getElementById('sulfurBatubara').value) / 100;
-
-        const kalorBiomassa = parseFloat(document.getElementById('kalorBiomassa').value);
-        const hargaBiomassa = parseFloat(document.getElementById('hargaBiomassa').value);
-        const sulfurBiomassa = parseFloat(document.getElementById('sulfurBiomassa').value) / 100;
-
-
-        if (isNaN(efisiensi) || isNaN(persenCoFiring) || isNaN(karbonBatubara) || isNaN(kalorBatubara) || isNaN(kalorBiomassa) || isNaN(hargaBatubara) || isNaN(hargaBiomassa) || isNaN(sulfurBatubara) || isNaN(sulfurBiomassa)) {
-            showToast("Mohon isi semua field di 'Parameter Umum' & 'Data Bahan Bakar' dengan angka yang valid.", false);
-            return;
-        }
-
-        let totalJamOperasi = 0;
-        let totalKebutuhanBiomassaTon = 0;
-        let totalPenguranganCo2Ton = 0;
-        let totalPenguranganSO2Ton = 0;
-        let totalBiayaBaseline = 0;
-        let totalBiayaCofiring = 0;
-
-        const blokBebanItems = document.querySelectorAll('.blok-beban-item');
-        if (blokBebanItems.length === 0) {
-            showToast("Mohon tambahkan minimal satu blok beban.", false);
-            return;
-        }
-        
-        const blokPertama = blokBebanItems[0];
-        const bebanMwBlokPertama = parseFloat(blokPertama.querySelector('.input-beban').value);
-        const jamOperasiBlokPertama = parseFloat(blokPertama.querySelector('.input-jam').value);
-
-        if(isNaN(bebanMwBlokPertama) || isNaN(jamOperasiBlokPertama) || bebanMwBlokPertama <= 0 || jamOperasiBlokPertama <= 0){
-            if(rincianBtn) rincianBtn.style.display = 'none';
-        } else {
-            dataUntukRincian = {
-                bebanMw: bebanMwBlokPertama,
-                jamOperasi: jamOperasiBlokPertama,
-                efisiensi, persenCoFiring, karbonBatubara, kalorBatubara, kalorBiomassa, hargaBatubara, hargaBiomassa,
-                sulfurBatubara, sulfurBiomassa
-            };
-        }
-
-        for (const blok of blokBebanItems) {
-            const bebanMw = parseFloat(blok.querySelector('.input-beban').value);
-            const jamOperasi = parseFloat(blok.querySelector('.input-jam').value);
-
-            if (isNaN(bebanMw) || isNaN(jamOperasi) || bebanMw <= 0 || jamOperasi <= 0) {
-                showToast("Mohon isi semua field 'Beban' dan 'Jam Operasi' di setiap blok dengan angka positif.", false);
-                if(rincianBtn) rincianBtn.style.display = 'none';
-                return;
-            }
-
-            const energiListrik_kkal = bebanMw * 860000;
-            const energiPanasInput_kkal = energiListrik_kkal / efisiensi;
-            const massaBatuBaraBaseline_kg_jam = energiPanasInput_kkal / kalorBatubara;
-            const biayaBaseline_jam = (massaBatuBaraBaseline_kg_jam / 1000) * hargaBatubara;
-            const energiDariBiomassa_kkal = energiPanasInput_kkal * persenCoFiring;
-            const energiDariBatubara_kkal = energiPanasInput_kkal * (1 - persenCoFiring);
-            const massaBiomassa_kg_jam = energiDariBiomassa_kkal / kalorBiomassa;
-            const massaBatubaraCofiring_kg_jam = energiDariBatubara_kkal / kalorBatubara;
-            const biayaCofiring_jam = ((massaBatubaraCofiring_kg_jam / 1000) * hargaBatubara) + ((massaBiomassa_kg_jam / 1000) * hargaBiomassa);
-            const emisiBaseline_kg_jam = massaBatuBaraBaseline_kg_jam * karbonBatubara * (44 / 12);
-            
-            const emisiCofiring_kg_jam = massaBatubaraCofiring_kg_jam * karbonBatubara * (44 / 12);
-            const emisiSO2_kg_jam = (massaBatubaraCofiring_kg_jam * sulfurBatubara * 2) + (massaBiomassa_kg_jam * sulfurBiomassa * 2);
-            const emisiSO2_baseline_kg_jam = massaBatuBaraBaseline_kg_jam * sulfurBatubara * 2;
-            
-            const penguranganCo2_kg_jam = emisiBaseline_kg_jam - emisiCofiring_kg_jam;
-            const penguranganSO2_kg_jam = emisiSO2_baseline_kg_jam - emisiSO2_kg_jam;
-
-            totalJamOperasi += jamOperasi;
-            totalKebutuhanBiomassaTon += (massaBiomassa_kg_jam * jamOperasi) / 1000;
-            totalPenguranganCo2Ton += (penguranganCo2_kg_jam * jamOperasi) / 1000;
-            totalPenguranganSO2Ton += (penguranganSO2_kg_jam * jamOperasi) / 1000;
-            totalBiayaBaseline += biayaBaseline_jam * jamOperasi;
-            totalBiayaCofiring += biayaCofiring_jam * jamOperasi;
-        }
-
-        document.getElementById('totalJamOperasi').innerText = formatAngka(totalJamOperasi);
-        document.getElementById('totalKebutuhanBiomassa').innerText = formatAngka(totalKebutuhanBiomassaTon, 1);
-        document.getElementById('totalPenguranganCo2').innerText = formatAngka(totalPenguranganCo2Ton, 1);
-        document.getElementById('totalPenguranganSO2').innerText = formatAngka(totalPenguranganSO2Ton, 1);
-        document.getElementById('totalBiayaBaseline').innerText = formatRupiah(totalBiayaBaseline);
-        document.getElementById('totalBiayaCofiring').innerText = formatRupiah(totalBiayaCofiring);
-        document.getElementById('totalSelisihBiaya').innerText = formatRupiah(totalBiayaCofiring - totalBiayaBaseline);
-        
-        document.getElementById('hasilKalkulasi').style.display = 'block';
-        if (rincianBtn && dataUntukRincian.bebanMw) {
-            rincianBtn.style.display = 'block';
-        }
-    }
-
-    function tampilkanRincianPerhitungan() {
-        if (!dataUntukRincian || isNaN(dataUntukRincian.bebanMw)) {
-            showToast("Data untuk rincian tidak valid. Jalankan perhitungan terlebih dahulu.", false);
-            return;
-        }
-
-        function formatAngka(angka, desimal = 1) {
-            return new Intl.NumberFormat('id-ID', { maximumFractionDigits: desimal, minimumFractionDigits: desimal }).format(angka);
-        }
-        function formatRupiah(angka) {
-            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
-        }
-
-        const data = dataUntukRincian;
-
-        const energiListrik_kkal = data.bebanMw * 860000;
-        const energiPanasInput_kkal = energiListrik_kkal / data.efisiensi;
-        const massaBatuBaraBaseline_kg_jam = energiPanasInput_kkal / data.kalorBatubara;
-        const biayaBaseline_jam = (massaBatuBaraBaseline_kg_jam / 1000) * data.hargaBatubara;
-        const emisiBaseline_kg_jam = massaBatuBaraBaseline_kg_jam * data.karbonBatubara * (44 / 12);
-        const energiDariBiomassa_kkal = energiPanasInput_kkal * data.persenCoFiring;
-        const energiDariBatubara_kkal = energiPanasInput_kkal * (1 - data.persenCoFiring);
-        const massaBiomassa_kg_jam = energiDariBiomassa_kkal / data.kalorBiomassa;
-        const massaBatubaraCofiring_kg_jam = energiDariBatubara_kkal / data.kalorBatubara;
-        const biayaCofiring_jam = ((massaBatubaraCofiring_kg_jam / 1000) * data.hargaBatubara) + ((massaBiomassa_kg_jam / 1000) * data.hargaBiomassa);
-        const emisiCofiring_kg_jam = massaBatubaraCofiring_kg_jam * data.karbonBatubara * (44 / 12);
-        const kebutuhanBiomassa_ton_thn = (massaBiomassa_kg_jam * data.jamOperasi) / 1000;
-        const penguranganCo2_ton_thn = ((emisiBaseline_kg_jam - emisiCofiring_kg_jam) * data.jamOperasi) / 1000;
-        const totalMassaCo_jam = massaBiomassa_kg_jam + massaBatubaraCofiring_kg_jam;
-        const persenMassaBiomassa = totalMassaCo_jam > 0 ? (massaBiomassa_kg_jam / totalMassaCo_jam) * 100 : 0;
-        
-        const emisiSO2_kg_jam = (massaBatubaraCofiring_kg_jam * data.sulfurBatubara * 2) + (massaBiomassa_kg_jam * data.sulfurBiomassa * 2);
-        const emisiSO2_baseline_kg_jam = massaBatuBaraBaseline_kg_jam * data.sulfurBatubara * 2;
-        const penguranganSO2_kg_jam = emisiSO2_baseline_kg_jam - emisiSO2_kg_jam;
-
-
-        const setText = (id, value) => {
-            const el = document.getElementById(id);
-            if (el) el.innerText = value;
-        };
-
-        setText('rincian-modal-title', `Rincian Perhitungan (untuk Beban ${data.bebanMw} MW)`);
-
-        setText('detail-beban-1', data.bebanMw);
-        setText('detail-energi-listrik', formatAngka(energiListrik_kkal, 0));
-        setText('detail-energi-listrik-2', formatAngka(energiListrik_kkal, 0));
-        setText('detail-efisiensi', data.efisiensi * 100);
-        setText('detail-energi-panas', formatAngka(energiPanasInput_kkal, 0));
-
-        setText('detail-energi-panas-2', formatAngka(energiPanasInput_kkal, 0));
-        setText('detail-kalor-bb-1', formatAngka(data.kalorBatubara, 0));
-        setText('detail-baseline-massa', formatAngka(massaBatuBaraBaseline_kg_jam));
-        setText('detail-baseline-massa-2', formatAngka(massaBatuBaraBaseline_kg_jam));
-        setText('detail-baseline-massa-3', formatAngka(massaBatuBaraBaseline_kg_jam));
-        setText('detail-harga-bb', formatRupiah(data.hargaBatubara));
-        setText('detail-baseline-biaya', formatRupiah(biayaBaseline_jam));
-        setText('detail-karbon-bb-1', data.karbonBatubara * 100);
-        setText('detail-baseline-emisi', formatAngka(emisiBaseline_kg_jam));
-        setText('detail-baseline-emisi-so2', formatAngka(emisiSO2_baseline_kg_jam));
-
-        setText('detail-persen-cofiring-1', data.persenCoFiring * 100);
-        setText('detail-persen-cofiring-2', data.persenCoFiring * 100);
-        setText('detail-energi-panas-3', formatAngka(energiPanasInput_kkal, 0));
-        setText('detail-co-energi-bio', formatAngka(energiDariBiomassa_kkal, 0));
-        setText('detail-persen-bb', 100 - (data.persenCoFiring * 100));
-        setText('detail-energi-panas-4', formatAngka(energiPanasInput_kkal, 0));
-        setText('detail-co-energi-bb', formatAngka(energiDariBatubara_kkal, 0));
-        setText('detail-co-energi-bio-2', formatAngka(energiDariBiomassa_kkal, 0));
-        setText('detail-kalor-bio', formatAngka(data.kalorBiomassa, 0));
-        setText('detail-co-massa-bio', formatAngka(massaBiomassa_kg_jam));
-        setText('detail-co-energi-bb-2', formatAngka(energiDariBatubara_kkal, 0));
-        setText('detail-kalor-bb-2', formatAngka(data.kalorBatubara, 0));
-        setText('detail-co-massa-bb', formatAngka(massaBatubaraCofiring_kg_jam));
-        setText('detail-co-biaya-total', formatRupiah(biayaCofiring_jam));
-        setText('detail-co-massa-bb-2', formatAngka(massaBatubaraCofiring_kg_jam));
-        setText('detail-karbon-bb-2', data.karbonBatubara * 100);
-        setText('detail-co-emisi', formatAngka(emisiCofiring_kg_jam));
-        setText('detail-co-emisi-so2', formatAngka(emisiSO2_kg_jam));
-
-        setText('detail-final-kebutuhan-bio', `${formatAngka(kebutuhanBiomassa_ton_thn)} ton/tahun`);
-        setText('detail-final-pengurangan-co2', `${formatAngka(penguranganCo2_ton_thn)} ton CO2/tahun`);
-        setText('detail-final-pengurangan-so2', `${formatAngka(penguranganSO2_kg_jam)} kg SO2/jam`);
-        setText('detail-final-persen-energi', formatAngka(data.persenCoFiring * 100, 2));
-        setText('detail-final-persen-massa', formatAngka(persenMassaBiomassa, 2));
-        
-        openModal(document.getElementById('rincianPerhitunganModal'));
-    }
-    
-    function renderTabelDokumen() {
-        const tabelDokumenBody = document.getElementById('tabel-dokumen-body');
-        if (!tabelDokumenBody) return;
-        tabelDokumenBody.innerHTML = dokumenTerkait.map((doc, index) => `
-            <tr>
-                <td><a href="dokumen/${doc.namaFile}" target="_blank">${doc.namaFile}</a></td>
-                <td>${doc.deskripsi}</td>
-                <td>${new Date(doc.tanggal).toLocaleDateString('id-ID')}</td>
-                <td class="actions">
-                    <button class="btn-delete" data-index="${index}"><i class="fas fa-trash"></i> Hapus</button>
-                </td>
-            </tr>
-        `).join('');
-    }
-    function renderCatatan() {
-        const catatanList = document.getElementById('catatan-list');
-        if (!catatanList) return;
-        catatanList.innerHTML = catatanReferensi.map((cat, index) => `
-            <div class="catatan-item">
-                <div class="catatan-header">
-                    <span>${new Date(cat.timestamp).toLocaleDateString('id-ID')}</span>
-                    <button class="btn-delete btn-sm" data-index="${index}"><i class="fas fa-trash"></i></button>
-                </div>
-                <p>${cat.teks}</p>
-            </div>
-        `).join('');
-    }
-
-    function setupReferensiListeners() {
-        const tambahDokumenBtn = document.getElementById('tambah-dokumen-btn');
-        const simpanCatatanBtn = document.getElementById('simpan-catatan-btn');
-        const dokumenForm = document.getElementById('dokumen-form');
-        const tabelDokumenBody = document.getElementById('tabel-dokumen-body');
-
-        if (tambahDokumenBtn) {
-            tambahDokumenBtn.addEventListener('click', () => {
-                dokumenForm.reset();
-                openModal(document.getElementById('tambahDokumenModal'));
-            });
-        }
-
-        if (dokumenForm) {
-            dokumenForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const fileInput = document.getElementById('form-dokumen-file');
-                const deskripsiInput = document.getElementById('form-dokumen-deskripsi');
-
-                if (fileInput.files.length > 0) {
-                    const newDoc = {
-                        namaFile: fileInput.files[0].name,
-                        deskripsi: deskripsiInput.value,
-                        tanggal: new Date().toISOString()
-                    };
-                    dokumenTerkait.push(newDoc);
-                    saveDokumen();
-                    renderTabelDokumen();
-                    closeModal(document.getElementById('tambahDokumenModal'));
-                    showToast('Dokumen berhasil ditambahkan.');
-                } else {
-                    showToast('Silakan pilih file terlebih dahulu.', false);
-                }
-            });
-        }
-
-        if (simpanCatatanBtn) {
-            simpanCatatanBtn.addEventListener('click', function() {
-                const textarea = document.getElementById('catatan-baru-textarea');
-                if(textarea.value.trim() !== ''){
-                    const newCatatan = {
-                        teks: textarea.value.trim(),
-                        timestamp: new Date().toISOString()
-                    };
-                    catatanReferensi.push(newCatatan);
-                    saveCatatan();
-                    renderCatatan();
-                    textarea.value = '';
-                    showToast('Catatan berhasil disimpan.');
-                }
-            });
-        }
-
-        if (tabelDokumenBody) {
-            tabelDokumenBody.addEventListener('click', function(e){
-                if(e.target.closest('.btn-delete')){
-                    const index = e.target.closest('.btn-delete').dataset.index;
-                    if(confirm(`Yakin ingin menghapus dokumen "${dokumenTerkait[index].namaFile}"?`)){
-                        dokumenTerkait.splice(index, 1);
-                        saveDokumen();
-                        renderTabelDokumen();
-                        showToast('Dokumen berhasil dihapus.');
-                    }
-                }
-            });
-        }
-
-        renderTabelDokumen();
-        renderCatatan();
-    }
-    
-    // --- FUNGSI BARU UNTUK INVENTORI ---
-    
-    function generateUniqueCode(prefix) {
-        let newCode;
-        let counter = 1;
-        do {
-            newCode = `${prefix}-${String(counter).padStart(4, '0')}`;
-            counter++;
-        } while (inventoryItems.some(item => item.code === newCode));
-        return newCode;
-    }
-
-    function renderMasterData() {
-        const tbody = document.querySelector('#master-data-body');
-        if (!tbody) return;
-        
-        tbody.innerHTML = '';
-        if (inventoryItems.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 20px;">Belum ada data barang. Silakan tambah barang baru.</td></tr>';
-        } else {
-            inventoryItems.forEach((item, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${item.code}</td>
-                    <td>${item.name}</td>
-                    <td>${item.category}</td>
-                    <td>${item.unit || '-'}</td>
-                    <td>${item.stock}</td>
-                    <td>${item.reorderPoint || '-'}</td>
-                    <td>${item.supplier || '-'}</td>
-                    <td>${item.location}</td>
-                    <td>${item.expiry || '-'}</td>
-                    <td class="actions">
-                        <button class="btn-primary" data-action="detail-item" data-index="${index}"><i class="fas fa-info-circle"></i> Detail</button>
-                        <button class="btn-edit" data-action="edit-item" data-index="${index}"><i class="fas fa-edit"></i> Edit</button>
-                        <button class="btn-delete" data-action="delete-item" data-index="${index}"><i class="fas fa-trash"></i> Hapus</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-        
-        const itemFormEl = document.getElementById('item-form');
-        if(itemFormEl && !itemFormEl.dataset.listenerAttached){
-            itemFormEl.addEventListener('submit', handleItemFormSubmit);
-            itemFormEl.dataset.listenerAttached = 'true';
-        }
-    }
-
-    function openItemForm(itemData = null, index = null) {
-        const modal = document.getElementById('itemFormModal');
-        const form = document.getElementById('item-form');
-        const title = document.getElementById('item-form-title');
-        const itemCodeInput = document.getElementById('item-code');
-        const generateCodeBtn = document.getElementById('generate-code-btn');
-        form.reset();
-        document.getElementById('item-index').value = '';
-        
-        const categorySelect = document.getElementById('item-category');
-        categorySelect.innerHTML = `<option value="">Pilih Kategori</option>`;
-        inventoryCategories.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat;
-            option.textContent = cat;
-            categorySelect.appendChild(option);
-        });
-
-        if (itemData) {
-            title.textContent = 'Edit Barang';
-            document.getElementById('item-index').value = index;
-            itemCodeInput.value = itemData.code;
-            document.getElementById('item-name').value = itemData.name;
-            document.getElementById('item-category').value = itemData.category;
-            document.getElementById('item-unit').value = itemData.unit; 
-            document.getElementById('item-stock').value = itemData.stock;
-            document.getElementById('item-reorder').value = itemData.reorderPoint; 
-            document.getElementById('item-supplier').value = itemData.supplier; 
-            document.getElementById('item-location').value = itemData.location;
-            document.getElementById('item-expiry').value = itemData.expiry || '';
-            if (generateCodeBtn) generateCodeBtn.style.display = 'none';
-        } else {
-            title.textContent = 'Tambah Barang Baru';
-            if (generateCodeBtn) generateCodeBtn.style.display = 'inline-block';
-            itemCodeInput.value = '';
-        }
-        openModal(modal);
-    }
-    
-    function showItemDetail(item) {
-        const content = document.getElementById('item-detail-content');
-        if (!content) return;
-        
-        const itemTransactions = transactionLog.filter(log => log.itemCode === item.code);
-
-        let transactionHtml = '';
-        if (itemTransactions.length > 0) {
-            transactionHtml = `
-                <div class="log-table-wrapper">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Tanggal</th>
-                                <th>Jenis</th>
-                                <th>Jumlah</th>
-                                <th>Keterangan</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${itemTransactions.map(log => `
-                                <tr>
-                                    <td>${new Date(log.timestamp).toLocaleString('id-ID')}</td>
-                                    <td>${log.type}</td>
-                                    <td>${log.quantity} ${item.unit}</td>
-                                    <td>${log.notes || '-'}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        } else {
-            transactionHtml = '<p style="text-align: center; color: #a9c1d9;">Belum ada riwayat transaksi untuk barang ini.</p>';
-        }
-
-        content.innerHTML = `
-            <div class="detail-section">
-                <h4>Informasi Utama</h4>
-                <p><strong>Kode Barang:</strong> ${item.code}</p>
-                <p><strong>Nama Barang:</strong> ${item.name}</p>
-                <p><strong>Kategori:</strong> ${item.category}</p>
-                <p><strong>Satuan:</strong> ${item.unit || '-'}</p>
-                <p><strong>Lokasi Gudang:</strong> ${item.location}</p>
-                <p><strong>Tanggal Kadaluarsa:</strong> ${item.expiry || '-'}</p>
-            </div>
-            <div class="detail-section" style="margin-top: 20px;">
-                <h4>Status Stok</h4>
-                <p><strong>Stok Saat Ini:</strong> ${item.stock} ${item.unit || ''}</p>
-                <p><strong>Reorder Point (Min. Stok):</strong> ${item.reorderPoint || '-'} ${item.unit || ''}</p>
-                <p><strong>Supplier/Vendor:</strong> ${item.supplier || '-'}</p>
-            </div>
-            <div class="detail-section" style="margin-top: 20px;">
-                <h4>Riwayat Transaksi</h4>
-                ${transactionHtml}
-            </div>
-        `;
-        openModal(itemDetailModal);
-    }
-
-    function setupInboundFormListeners() {
-        const inboundForm = contentBody.querySelector('#inbound-form');
-        const inboundCodeInput = contentBody.querySelector('#inbound-code');
-        const inboundNameInput = contentBody.querySelector('#inbound-name');
-        const newItemPrompt = contentBody.querySelector('#new-item-prompt');
-        const addNewItemLink = contentBody.querySelector('#add-new-item-link');
-    
-        if (!inboundCodeInput) return;
-    
-        inboundCodeInput.addEventListener('blur', () => {
-            const code = inboundCodeInput.value.trim().toUpperCase();
-            if (!code) {
-                newItemPrompt.style.display = 'none';
-                return;
-            }
-    
-            const existingItem = inventoryItems.find(item => item.code === code);
-    
-            if (existingItem) {
-                inboundNameInput.value = existingItem.name;
-                inboundNameInput.readOnly = true;
-                newItemPrompt.style.display = 'none';
-            } else {
-                inboundNameInput.value = '';
-                inboundNameInput.readOnly = false;
-                newItemPrompt.style.display = 'flex';
-            }
-        });
-    
-        if (addNewItemLink) {
-            addNewItemLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                const codeToCreate = inboundCodeInput.value.trim().toUpperCase();
-                const nameToCreate = inboundNameInput.value.trim();
-                openItemForm();
-                document.getElementById('item-code').value = codeToCreate;
-                document.getElementById('item-name').value = nameToCreate;
-                showToast('Silakan lengkapi detail barang baru.', true);
-            });
-        }
-        
-        if (inboundForm) {
-            inboundForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const code = inboundCodeInput.value.trim().toUpperCase();
-                const quantity = parseInt(document.getElementById('inbound-quantity').value);
-                const notes = document.getElementById('inbound-notes').value;
-    
-                const itemIndex = inventoryItems.findIndex(item => item.code === code);
-    
-                if (itemIndex === -1) {
-                    showToast('Barang ini tidak ada di Master Data. Harap tambahkan terlebih dahulu.', false);
-                    return;
-                }
-                
-                inventoryItems[itemIndex].stock += quantity;
-                
-                const newTransaction = {
-                    itemCode: code,
-                    type: 'Barang Masuk',
-                    quantity: quantity,
-                    notes: notes,
-                    timestamp: new Date().toISOString()
-                };
-                transactionLog.push(newTransaction);
-                
-                saveInventoryItems();
-                saveTransactionLog();
-                
-                showToast(`Berhasil menambahkan ${quantity} stok untuk ${inventoryItems[itemIndex].name}.`, true);
-                
-                inboundForm.reset();
-                inboundNameInput.readOnly = false;
-                inboundCodeInput.focus();
-            });
-        }
-    }
-
-    function handleItemFormSubmit(event) {
-        event.preventDefault();
-        const index = document.getElementById('item-index').value;
-        const newItem = {
-            code: document.getElementById('item-code').value.trim().toUpperCase(),
-            name: document.getElementById('item-name').value,
-            category: document.getElementById('item-category').value,
-            unit: document.getElementById('item-unit').value,
-            stock: parseInt(document.getElementById('item-stock').value),
-            reorderPoint: parseInt(document.getElementById('item-reorder').value),
-            supplier: document.getElementById('item-supplier').value,
-            location: document.getElementById('item-location').value,
-            expiry: document.getElementById('item-expiry').value
-        };
-        
-        if (index === '' && inventoryItems.some(item => item.code === newItem.code)) {
-            showToast(`Error: Kode barang "${newItem.code}" sudah ada. Gunakan kode lain.`, false);
-            return;
-        }
-        
-        if (index === '') {
-            inventoryItems.push(newItem);
-            showToast('Barang baru berhasil ditambahkan.');
-        } else {
-            const originalItem = inventoryItems[index];
-            if (originalItem.code !== newItem.code && inventoryItems.some(item => item.code === newItem.code)) {
-                showToast(`Error: Kode barang "${newItem.code}" sudah ada. Gunakan kode lain.`, false);
-                return;
-            }
-            inventoryItems[index] = newItem;
-            showToast('Data barang berhasil diperbarui.');
-        }
-        
-        saveInventoryItems();
-        closeModal(document.getElementById('itemFormModal'));
-        renderMasterData();
-    }
-    
-    function renderSubMenu(menuName) {
-        const mainMenu = contentBody.querySelector('#warehouse-main-menu');
-        const dynamicContent = contentBody.querySelector('#warehouse-dynamic-content');
-        const backBtn = contentBody.querySelector('#warehouse-back-btn');
-        let contentHTML = '';
-    
-        if (menuName === 'master-data') {
-            contentHTML = `
-                <div class="submenu-bar">
-                    <button class="submenu-btn active" data-target="daftar-barang-content"><i class="fas fa-boxes"></i> Daftar Barang/Material</button>
-                    <button class="submenu-btn" data-target="kategori-barang-content"><i class="fas fa-tags"></i> Kategori Barang</button>
-                    <button class="submenu-btn" data-target="lokasi-gudang-content"><i class="fas fa-map-marker-alt"></i> Lokasi Gudang/Rak</button>
-                </div>
-                <div id="daftar-barang-content" class="re-content-section">
-                    <div class="action-bar-sub">
-                        <button class="btn-success" data-action="add-item"><i class="fas fa-plus"></i> Tambah Barang</button>
-                        <button class="btn-primary" data-action="import-items"><i class="fas fa-file-import"></i> Impor dari Excel</button>
-                        <input type="file" id="item-excel-importer" style="display:none" accept=".xlsx, .xls">
-                        <button class="btn-delete" data-action="delete-all-items"><i class="fas fa-trash-alt"></i> Hapus Semua Data</button>
-                    </div>
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Kode Barang</th><th>Nama Barang</th><th>Kategori</th><th>Satuan</th><th>Stok</th>
-                                    <th>Min. Stok</th><th>Supplier</th><th>Lokasi</th><th>Kadaluarsa</th><th>Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="master-data-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div id="kategori-barang-content" class="re-content-section" style="display:none;">
-                    <h3><i class="fas fa-tags"></i> Manajemen Kategori Barang</h3>
-                    <p style="text-align: center; margin-top: 20px; color: #64748b;">Fitur ini sedang dalam pengembangan.</p>
-                </div>
-                <div id="lokasi-gudang-content" class="re-content-section" style="display:none;">
-                    <h3><i class="fas fa-map-marker-alt"></i> Manajemen Lokasi Gudang/Rak</h3>
-                    <p style="text-align: center; margin-top: 20px; color: #64748b;">Fitur ini sedang dalam pengembangan.</p>
-                </div>`;
-        } else if (menuName === 'barang-masuk') {
-            contentHTML = `
-                <div id="warehouse-inbound-content">
-                    <div class="form-section">
-                        <h3><i class="fas fa-box-open"></i> Input Barang Masuk</h3>
-                        <form id="inbound-form">
-                            <div class="input-group">
-                                <label for="inbound-code">Kode Barang</label>
-                                <input type="text" id="inbound-code" placeholder="Scan atau masukkan kode barang..." required>
-                            </div>
-                            <div class="input-group">
-                                <label for="inbound-name">Nama Barang</label>
-                                <input type="text" id="inbound-name" placeholder="Nama akan terisi otomatis jika ada di Master Data" required>
-                            </div>
-                            <div class="input-group">
-                                <label for="inbound-quantity">Jumlah Masuk</label>
-                                <input type="number" id="inbound-quantity" min="1" required>
-                            </div>
-                            <div class="input-group">
-                                <label for="inbound-notes">Catatan (Opsional)</label>
-                                <textarea id="inbound-notes" placeholder="Contoh: Diterima dari Supplier ABC"></textarea>
-                            </div>
-                            <button type="submit" class="btn-success" style="width: 100%; padding: 12px; font-size: 1.1em;">
-                                <i class="fas fa-check"></i> Proses Barang Masuk
-                            </button>
-                        </form>
-                        <div id="new-item-prompt" style="display: none; margin-top: 20px;" class="blinking-info-container">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <p>Barang tidak ditemukan. <a href="#" id="add-new-item-link" class="blinking-text">Klik di sini untuk menambahkannya ke Master Data.</a></p>
-                        </div>
-                    </div>
-                </div>`;
-        } else {
-            contentHTML = `<h3 style="text-align: center; margin-top: 20px;"><i class="fas fa-info-circle"></i> ${menuName.replace(/-/g, ' ').toUpperCase()}</h3><p style="text-align: center; color: #64748b;">Konten untuk modul ini akan segera hadir.</p>`;
-        }
-    
-        dynamicContent.innerHTML = contentHTML;
-        mainMenu.style.display = 'none';
-        dynamicContent.style.display = 'block';
-        backBtn.style.display = 'inline-flex';
-        
-        if (menuName === 'master-data') {
-            renderMasterData();
-            setupMasterDataTabs();
-        } else if (menuName === 'barang-masuk') {
-            setupInboundFormListeners();
-        }
-    }
-
-    // --- NAVIGASI UTAMA ---
-    function navigateTo(pageName, addToHistory = true) {
-        currentPageName = pageName;
-        const oldBtn = document.getElementById('show-options-btn');
-        if (oldBtn) oldBtn.remove();
-        pageTitle.textContent = pageName;
-        menuLinks.forEach(l => l.classList.remove('active'));
-        
-        const activeLink = document.querySelector(`.sidebar .menu a[data-page="${pageName}"]`);
-        if (activeLink) activeLink.classList.add('active');
-
-        contentBody.innerHTML = '';
-
-        if (pageName === 'DASHBOARD') {
-            const headerActions = document.querySelector('.content-header .header-actions');
-            if (!document.getElementById('show-options-btn')) {
-                headerActions.insertAdjacentHTML('beforeend', `
-                    <button id="show-options-btn" class="btn-primary">PILIH OPSI DASHBOARD</button>
-                `);
-            }
-            contentBody.innerHTML = `
-                <div id="summary-container" class="summary-container">
-                    <p class="summary-placeholder">Pilih opsi di atas untuk melihat summary.</p>
-                </div>
-                <div id="optionsModal" class="modal">
-                    <div class="modal-content form-modal">
-                        <span class="close-button">&times;</span>
-                        <h3>Pilih Opsi Dashboard</h3>
-                        <div class="options-grid">
-                            ${Array.from(menuLinks).filter(link => link.dataset.page !== 'DASHBOARD' && link.dataset.page !== 'TOOLS' && link.dataset.page !== 'WAREHOUSE & INVENTORY' && link.dataset.page !== 'REFERENSI DAN DATABASE').map(link => `<button class="option-btn" data-summary="${link.dataset.page.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}">${link.dataset.page}</button>`).join('')}
-                        </div>
-                    </div>
-                </div>`;
-
-            function openOptionsModal() { openModal(document.getElementById('optionsModal')); }
-            function closeModalFunc() { closeModal(document.getElementById('optionsModal')); }
-
-            function showSummary(summaryType) {
-                const container = document.getElementById('summary-container');
-                let content = '';
-                if (!container) return;
-                const formattedSummaryType = summaryType.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-');
-                switch (formattedSummaryType) {
-                    case 'human-resource-performance':
-                        const totalEmployees = employees.length;
-                        const activeToday = employees.filter(emp => emp.inOutStatus === 'Masuk').length;
-                        const attendancePercentage = totalEmployees > 0 ? ((activeToday / totalEmployees) * 100).toFixed(1) : 0;
-                        const combinedLog = [...monitoringLog, ...recapLog];
-                        const recentActivities = combinedLog.slice(0, 5);
-                        const recentActivitiesHTML = recentActivities.length > 0 ? recentActivities.map(log => `<li><div class="detail"><div class="name">${log.name}</div><div class="time">${new Date(log.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div></div><div class="status-wrapper">${log.keterangan && log.keterangan !== '-' ? `<span class="status keterangan-status">${log.keterangan}</span>` : ''}<span class="status ${log.status.toLowerCase()}">${log.status}</span></div></li>`).join('') : '<li>Tidak ada aktivitas terbaru.</li>';
-                        content = `
-                            <div class="hr-dashboard-container">
-                                <button id="hr-fullscreen-btn" title="Toggle Fullscreen"><i class="fas fa-expand"></i></button>
-                                <div class="marquee-container"><p>SELAMAT DATANG DI PT PLN NUSANTARA POWER SERVICE UNIT PLTU AMPANA, UTAMAKAN KESELAMATAN DAN KESEHATAN KERJA (K3) DALAM SETIAP AKTIVITAS ANDA.</p></div>
-                                <div class="hr-dashboard-grid">
-                                    <div class="kpi-card">
-                                        <div class="icon total-emp"><i class="fas fa-users"></i></div>
-                                        <div class="info">
-                                            <div class="number">${totalEmployees}</div>
-                                            <div class="label">Total Karyawan Terdaftar</div>
-                                        </div>
-                                    </div>
-                                    <div class="kpi-card" id="active-shift-display">
-                                        <div class="icon active-shift"><i class="fas fa-clock"></i></div>
-                                        <div class="info">
-                                            <div class="number">ISTIRAHAT</div>
-                                            <div class="label">Regu Bertugas Saat Ini</div>
-                                        </div>
-                                    </div>
-                                    <div class="kpi-card">
-                                        <div class="icon active-today"><i class="fas fa-user-check"></i></div>
-                                        <div class="info">
-                                            <div class="number">${activeToday}</div>
-                                            <div class="label">Jumlah Hadir Hari Ini</div>
-                                        </div>
-                                    </div>
-                                    <div class="kpi-card">
-                                        <div class="icon attendance-percent"><i class="fas fa-chart-pie"></i></div>
-                                        <div class="info">
-                                            <div class="number">${attendancePercentage}%</div>
-                                            <div class="label">Persentase Kehadiran</div>
-                                        </div>
-                                    </div>
-                                    <div class="kpi-card">
-                                        <div class="icon safety-score"><i class="fas fa-shield-alt"></i></div>
-                                        <div class="info">
-                                            <div class="number">98.5%</div>
-                                            <div class="label">Skor Keselamatan</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="hr-main-content-grid">
-                                    <div class="activity-feed">
-                                        <h3><i class="fas fa-history"></i> Aktivitas Terkini</h3>
-                                        <ul>${recentActivitiesHTML}</ul>
-                                        <div class="bottom-widgets">
-                                            <div class="k3-stats-dashboard">
-                                                <h3><i class="fas fa-hard-hat"></i> Data Statistik K3</h3>
-                                                <div class="k3-grid">
-                                                    <div class="k3-card yellow"><span>Jam Kerja Hilang</span><p id="d-k3-jam-hilang">0</p></div>
-                                                    <div class="k3-card red"><span>Kecelakaan Berat & Ringan</span><p id="d-k3-kecelakaan">NIHIL</p></div>
-                                                    <div class="k3-card blue"><span>Jam Kerja Bulan Lalu</span><p id="d-k3-jam-lalu">0</p></div>
-                                                    <div class="k3-card orange"><span>Total Jam Kerja</span><p id="d-k3-jam-total">0</p></div>
-                                                </div>
-                                            </div>
-                                            <div class="chart-wrapper">
-                                                <h3><i class="fas fa-chart-pie"></i> Komposisi Karyawan</h3>
-                                                <div class="chart-container">
-                                                    <canvas id="employeeCompositionChart"></canvas>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="video-container">
-                                        <h3><i class="fas fa-video"></i> PLTU AMPANA </h3>
-                                        <div class="video-wrapper"><video src="videos/PLTUAMPANA.mp4" autoplay loop muted playsinline>Browser Anda tidak mendukung tag video.</video></div>
-                                        <div class="blinking-info-container">
-                                            <i class="fas fa-triangle-exclamation"></i>
-                                            <p id="blinking-text" class="blinking-text"></p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>`;
-                        break;
-                    case 'equipment-management':
-                        navigateTo('EQUIPMENT MANAGEMENT');
-                        break;
-                    default:
-                        const title = summaryType.replace(/-/g, ' ').toUpperCase();
-                        content = `<div class="summary-content"><h3>${title}</h3><p>Data untuk modul ini belum tersedia.</p></div>`;
-                }
-                if (summaryType !== 'equipment-management') {
-                    container.innerHTML = content;
-                }
-                closeModalFunc();
-                const chartCanvas = document.getElementById('employeeCompositionChart');
-                if (chartCanvas) {
-                    const companyCounts = employees.reduce((acc, employee) => {
-                        acc[employee.company] = (acc[employee.company] || 0) + 1;
-                        return acc;
-                    }, {});
-                    const labels = Object.keys(companyCounts);
-                    const data = Object.values(companyCounts);
-                    new Chart(chartCanvas, {
-                        type: 'doughnut',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: 'Jumlah Karyawan',
-                                data: data,
-                                backgroundColor: [
-                                    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#8B5CF6',
-                                ],
-                                hoverOffset: 4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'bottom',
-                                    align: 'center',
-                                    labels: {
-                                        padding: 20
-                                    }
-                                },
-                                title: {
-                                    display: false,
-                                    text: 'Komposisi Karyawan per Perusahaan'
-                                },
-                                datalabels: {
-                                    formatter: (value) => value,
-                                    color: '#fff',
-                                    font: {
-                                        weight: 'bold',
-                                        size: 16,
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                updateActiveShiftDisplay();
-                setInterval(updateActiveShiftDisplay, 60000);
-                const blinkingTextElement = document.getElementById('blinking-text');
-                if (blinkingTextElement) {
-                    blinkingTextElement.textContent = notepadContent.toUpperCase();
-                }
-                if (formattedSummaryType === 'human-resource-performance') {
-                    const fullscreenBtn = document.getElementById('hr-fullscreen-btn');
-                    const dashboardContainer = document.getElementById('summary-container');
-                    if (fullscreenBtn && dashboardContainer) {
-                        fullscreenBtn.addEventListener('click', () => {
-                            dashboardContainer.classList.toggle('hr-dashboard-fullscreen');
-                            const icon = fullscreenBtn.querySelector('i');
-                            const isFullscreen = dashboardContainer.classList.contains('hr-dashboard-fullscreen');
-                            icon.className = isFullscreen ? 'fas fa-compress' : 'fas fa-expand';
-                            fullscreenBtn.title = isFullscreen ? 'Exit Fullscreen' : 'Toggle Fullscreen';
-                        });
-                    }
-                    const savedK3Stats = JSON.parse(localStorage.getItem('k3Stats'));
-                    if (savedK3Stats) {
-                        const jamHilangEl = document.getElementById('d-k3-jam-hilang');
-                        const kecelakaanEl = document.getElementById('d-k3-kecelakaan');
-                        const jamLaluEl = document.getElementById('d-k3-jam-lalu');
-                        const jamTotalEl = document.getElementById('d-k3-jam-total');
-                        if (jamHilangEl) jamHilangEl.textContent = savedK3Stats['k3-jam-hilang'] || '0';
-                        if (kecelakaanEl) kecelakaanEl.textContent = savedK3Stats['k3-kecelakaan'] || 'NIHIL';
-                        if (jamLaluEl) jamLaluEl.textContent = savedK3Stats['k3-jam-lalu'] || '0';
-                        if (jamTotalEl) jamTotalEl.textContent = savedK3Stats['k3-jam-total'] || '0';
-                    }
-                }
-            }
-            setTimeout(() => {
-                const showOptionsBtn = document.getElementById('show-options-btn');
-                const optionsModal = document.getElementById('optionsModal');
-                if (showOptionsBtn) showOptionsBtn.addEventListener('click', openOptionsModal);
-                if (optionsModal) {
-                    optionsModal.querySelector('.close-button').addEventListener('click', closeModalFunc);
-                    optionsModal.querySelectorAll('.option-btn').forEach(btn => btn.addEventListener('click', () => showSummary(btn.dataset.summary)));
-                    window.addEventListener('click', (event) => { if (event.target === optionsModal) closeModalFunc(); });
-                }
-            }, 0);
-        } else if (pageName === 'HUMAN RESOURCE PERFORMANCE') {
-            renderEmployeeManagementPage();
-        } else if (pageName === 'EQUIPMENT MANAGEMENT') {
-            contentBody.innerHTML = `
-                <div class="equipment-options">
-                    <button class="equipment-btn" data-content="operasi">
-                        <i class="fas fa-play-circle"></i> OPERASI
-                    </button>
-                    <button class="equipment-btn" data-content="pemeliharaan">
-                        <i class="fas fa-tools"></i> PEMELIHARAAN
-                    </button>
-                </div>
-                <div id="equipment-content-display" class="equipment-content-display">
-                    <p style="text-align:center; color:#64748b;">Pilih salah satu opsi di atas.</p>
-                </div>
-            `;
-            const mainButtonsContainer = document.querySelector('.equipment-options');
-            const displayArea = document.getElementById('equipment-content-display');
-            document.querySelectorAll('.equipment-btn').forEach(button => {
-                button.addEventListener('click', function () {
-                    const contentToShow = this.dataset.content;
-                    history.pushState({ page: pageName, sub: contentToShow }, '', `#${pageName.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}/${contentToShow}`);
-
-                    if (contentToShow === 'operasi') {
-                        mainButtonsContainer.classList.add('hidden');
-                        displayArea.innerHTML = '<h3>Konten Operasi</h3><p>Area ini akan menampilkan data dan informasi terkait operasi peralatan.</p>';
-                    } else if (contentToShow === 'pemeliharaan') {
-                        mainButtonsContainer.classList.add('hidden');
-                        displayArea.innerHTML = `
-                            <div class="maintenance-options">
-                                <button class="maintenance-btn" data-maintenance="mekanik"><i class="fas fa-cogs"></i> Mekanik</button>
-                                <button class="maintenance-btn" data-maintenance="elektrik"><i class="fas fa-bolt"></i> Elektrik</button>
-                                <button class="maintenance-btn" data-maintenance="instrument-control"><i class="fas fa-tachometer-alt"></i> Instrument Control</button>
-                                <button class="maintenance-btn" data-maintenance="common"><i class="fas fa-network-wired"></i> Common</button>
-                                <button class="maintenance-btn" data-maintenance="pendukung"><i class="fas fa-toolbox"></i> Pendukung Teknik</button>
-                            </div>
-                            <div id="maintenance-content" class="equipment-content-display" style="margin-top:20px;">
-                                <p style="text-align:center; color:#64748b;">Pilih salah satu sub-menu pemeliharaan di atas.</p>
-                            </div>
-                        `;
-                        const maintenanceBtns = document.querySelectorAll('.maintenance-btn');
-                        const maintenanceContent = document.getElementById('maintenance-content');
-                        function showMaintenanceContent(maintButton) {
-                            maintenanceBtns.forEach(btn => btn.classList.remove('active'));
-                            maintButton.classList.add('active');
-                            const maintenanceType = maintButton.dataset.maintenance;
-                            if (maintenanceType === 'mekanik') {
-                                maintenanceContent.innerHTML = `
-                                    <div class="maintenance-options category-level">
-                                        <button class="maintenance-btn category-btn" data-category="boiler"><i class="fas fa-fire"></i> Boiler</button>
-                                        <button class="maintenance-btn category-btn" data-category="turbine"><i class="fas fa-fan"></i> Turbine</button>
-                                        <button class="maintenance-btn category-btn" data-category="rotating"><i class="fas fa-sync-alt"></i> Rotating Equipment</button>
-                                        <button class="maintenance-btn category-btn" data-category="fuel"><i class="fas fa-gas-pump"></i> Sistem Bahan Bakar</button>
-                                        <button class="maintenance-btn category-btn" data-category="ash"><i class="fas fa-recycle"></i> Sistem Penanganan Abu</button>
-                                        <button class="maintenance-btn category-btn" data-category="cooling"><i class="fas fa-wind"></i> Sistem Pendingin</button>
-                                        <button class="maintenance-btn category-btn" data-category="lifting"><i class="fas fa-crane"></i> Peralatan Angkat</button>
-                                    </div>
-                                    <div id="category-content-display" class="equipment-content-display" style="margin-top:20px;">
-                                        <p style="text-align:center; color:#64748b;">Pilih kategori di atas untuk melihat daftar peralatan.</p>
-                                    </div>
-                                `;
-                                document.querySelectorAll('.category-btn').forEach(catButton => {
-                                    catButton.addEventListener('click', function () {
-                                        const categoryType = this.dataset.category;
-                                        history.pushState({ page: pageName, sub: contentToShow, sub2: maintenanceType, sub3: categoryType }, '', `#${pageName.toLowerCase().replace(/ /g, '-')}/${contentToShow}/${maintenanceType}/${categoryType}`);
-                                        maintButton.parentElement.classList.add('hidden');
-                                        catButton.parentElement.classList.add('hidden');
-                                        document.getElementById('category-content-display').innerHTML = `<h3>Daftar Peralatan untuk Kategori: ${categoryType.toUpperCase()}</h3><p>Tabel data akan ditampilkan di sini...</p>`;
-                                    });
-                                });
-                            } else {
-                                maintenanceContent.innerHTML = `<h3>Data untuk: ${maintenanceType.toUpperCase()}</h3><p>Tabel atau konten akan ditampilkan di sini.</p>`;
-                                maintButton.parentElement.classList.add('hidden');
-                            }
-                        }
-                        maintenanceBtns.forEach(maintButton => {
-                            maintButton.addEventListener('click', function () {
-                                const maintenanceType = this.dataset.maintenance;
-                                history.pushState({ page: pageName, sub: contentToShow, sub2: maintenanceType }, '', `#${pageName.toLowerCase().replace(/ /g, '-')}/${contentToShow}/${maintenanceType}`);
-                                showMaintenanceContent(this);
-                            });
-                        });
-                    }
-                });
-            });
-        }
-        else if (pageName === 'WAREHOUSE & INVENTORY') {
-            const warehouseContent = document.getElementById('warehouse-content');
-            if (warehouseContent) {
-                contentBody.innerHTML = warehouseContent.innerHTML;
-            } else {
-                contentBody.innerHTML = '<p>Error: Konten Warehouse tidak ditemukan.</p>';
-                return;
-            }
-
-            const mainMenu = contentBody.querySelector('#warehouse-main-menu');
-            const dynamicContent = contentBody.querySelector('#warehouse-dynamic-content');
-            const backBtn = contentBody.querySelector('#warehouse-back-btn');
-
-            mainMenu.style.display = 'block';
-            dynamicContent.style.display = 'none';
-            backBtn.style.display = 'none';
-            
-            const optionsGrid = contentBody.querySelector('.options-grid');
-            if (optionsGrid) {
-                optionsGrid.addEventListener('click', (e) => {
-                    const btn = e.target.closest('.option-btn');
-                    if (btn) {
-                        renderSubMenu(btn.dataset.action);
-                    }
-                });
-            }
-            backBtn.addEventListener('click', () => {
-                mainMenu.style.display = 'block';
-                dynamicContent.style.display = 'none';
-                backBtn.style.display = 'none';
-            });
-        }
-        else if (pageName === 'TOOLS MANAGEMENT') {
-            contentBody.innerHTML = `<p>Konten untuk halaman <strong>${pageName}</strong> sedang dalam pengembangan.</p>`;
-        }
-        else if (pageName === 'SOP & WORK INSTRUCTIONS') {
-            contentBody.innerHTML = `<p>Konten untuk halaman <strong>${pageName}</strong> sedang dalam pengembangan.</p>`;
-        }
-        else if (pageName === 'RENEWABLE ENERGY') {
-            contentBody.innerHTML = `
-                <div class="submenu-bar">
-                    <button class="submenu-btn active" data-target="smart-cofiring-content"><i class="fas fa-cogs"></i> Smart Co-firing</button>
-                    <button class="submenu-btn" data-target="referensi-content"><i class="fas fa-book-open"></i> Referensi & Database</button>
-                    <button class="submenu-btn" data-target="dokumen-content"><i class="fas fa-file-pdf"></i> Dokumen Pendukung</button>
-                    <button class="submenu-btn" data-action="load-dummy-data"><i class="fas fa-database"></i> Dummy Data</button>
-                </div>
-                <div id="smart-cofiring-content" class="re-content-section">
-                    <div class="kalkulator-container">
-                        <h1>"Smart Co-firing"</h1>
-                        <p class="deskripsi">Perhitungan Efisiensi Operasi co-firing dengan keandalan pembangkit.</p>
-                        
-                        <div class="form-section">
-                            <h3>Pilih Unit Pembangkit</h3>
-                            <div class="unit-selector">
-                                <div class="unit-option">
-                                    <input type="radio" id="unit1" name="unit-pembangkit" value="Unit 1" checked>
-                                    <label for="unit1">Unit #1</label>
-                                </div>
-                                <div class="unit-option">
-                                    <input type="radio" id="unit2" name="unit-pembangkit" value="Unit 2">
-                                    <label for="unit2">Unit #2</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-section">
-                            <h3>1. Parameter Umum & Asumsi</h3>
-                            <div class="parameter-grid">
-                                <div class="input-group">
-                                    <label for="efisiensi">Efisiensi Rata-rata PLTU (%)</label>
-                                    <input type="number" id="efisiensi" required>
-                                </div>
-                                <div class="input-group">
-                                    <label for="persenCoFiring">Target Persentase Co-firing (% Energi)</label>
-                                    <input type="number" id="persenCoFiring" required>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-section">
-                            <h3>2. Data Bahan Bakar & Ekonomi</h3>
-                            <div class="parameter-grid-bahan-bakar">
-                                    <div class="input-group">
-                                        <label for="jenis-batubara">Jenis Batu Bara</label>
-                                        <select id="jenis-batubara"></select>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="kalorBatubara">
-                                            Nilai Kalor (kkal/kg)
-                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Nilai kalor bahan bakar (Higher Heating Value).</span></span>
-                                        </label>
-                                        <input type="number" id="kalorBatubara" required>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="hargaBatubara">
-                                            Harga (Rp/ton)
-                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Harga bahan bakar per ton.</span></span>
-                                        </label>
-                                        <input type="number" id="hargaBatubara" required>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="karbonBatubara">
-                                            Kandungan Karbon (%)
-                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kandungan karbon (C) dalam bahan bakar, untuk menghitung emisi CO2.</span></span>
-                                        </label>
-                                        <input type="number" step="0.1" id="karbonBatubara" required>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="moistureBatubara">
-                                            Moisture (%)
-                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar air dalam bahan bakar. Mempengaruhi nilai kalor bersih.</span></span>
-                                        </label>
-                                        <input type="number" step="0.1" id="moistureBatubara" required>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="ashBatubara">
-                                            Ash Content (%)
-                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar abu dalam bahan bakar. Mempengaruhi nilai kalor dan potensi fouling.</span></span>
-                                        </label>
-                                        <input type="number" step="0.1" id="ashBatubara" required>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="sulfurBatubara">
-                                            Sulfur Content (%)
-                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar belerang (S) dalam bahan bakar. Untuk menghitung emisi SO2.</span></span>
-                                        </label>
-                                        <input type="number" step="0.01" id="sulfurBatubara" required>
-                                    </div>
-                            </div>
-                            <hr class="pemisah-bahan-bakar">
-                            <div class="parameter-grid-bahan-bakar">
-                                    <div class="input-group">
-                                        <label for="jenis-biomassa">Jenis Biomassa</label>
-                                        <select id="jenis-biomassa"></select>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="kalorBiomassa">
-                                            Nilai Kalor (kkal/kg)
-                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Nilai kalor bahan bakar (Higher Heating Value).</span></span>
-                                        </label>
-                                        <input type="number" id="kalorBiomassa" required>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="hargaBiomassa">
-                                            Harga (Rp/ton)
-                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Harga bahan bakar per ton.</span></span>
-                                        </label>
-                                        <input type="number" id="hargaBiomassa" required>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="moistureBiomassa">
-                                            Moisture (%)
-                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar air dalam bahan bakar. Mempengaruhi nilai kalor bersih.</span></span>
-                                        </label>
-                                        <input type="number" step="0.1" id="moistureBiomassa" required>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="ashBiomassa">
-                                            Ash Content (%)
-                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar abu dalam bahan bakar. Mempengaruhi nilai kalor dan potensi fouling.</span></span>
-                                        </label>
-                                        <input type="number" step="0.1" id="ashBiomassa" required>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="sulfurBiomassa">
-                                            Sulfur Content (%)
-                                            <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar belerang (S) dalam bahan bakar. Untuk menghitung emisi SO2.</span></span>
-                                        </label>
-                                        <input type="number" step="0.01" id="sulfurBiomassa" required>
-                                    </div>
-                            </div>
-                        </div>
-
-                        <div class="form-section">
-                            <h3>3. Profil Beban Operasi (Blok Beban)</h3>
-                            <div id="blok-beban-container"></div>
-                            <button type="button" id="tambah-blok-btn" class="btn-secondary" style="margin-top: 15px;"><i class="fas fa-plus"></i> Tambah Blok Beban</button>
-                        </div>
-                        
-                        <button type="button" id="hitung-fluktuatif-btn" class="btn-primary" style="width:100%; font-size: 1.2rem; padding: 15px;"><i class="fas fa-calculator"></i> HITUNG TOTAL DAMPAK TAHUNAN</button>
-                        <button type="button" id="lihat-rincian-btn" class="btn-success" style="width:100%; margin-top: 15px; display:none;"><i class="fas fa-table"></i> Lihat Rincian Perhitungan (Blok 1)</button>
-                        
-                        <div id="hasilKalkulasi" class="hasil-container" style="display:none; margin-top: 30px;">
-                            <h2>Hasil Akumulasi Tahunan</h2>
-                            <div class="hasil-item">
-                                <p>Total Jam Operasi</p>
-                                <span id="totalJamOperasi">0</span> jam/tahun
-                            </div>
-                            <div class="hasil-item highlight">
-                                <p>Kebutuhan Biomassa Tahunan</p>
-                                <span id="totalKebutuhanBiomassa">0</span> ton/tahun
-                            </div>
-                            <div class="hasil-item highlight">
-                                <p>Pengurangan Emisi CO2 Tahunan</p>
-                                <span id="totalPenguranganCo2">0</span> ton CO2/tahun
-                            </div>
-                            <div class="hasil-item highlight">
-                                <p>Pengurangan Emisi SO2 Tahunan</p>
-                                <span id="totalPenguranganSO2">0</span> ton SO2/tahun
-                            </div>
-                            <div class="hasil-item">
-                                <p>Total Biaya (Baseline)</p>
-                                <span id="totalBiayaBaseline">Rp 0</span>
-                            </div>
-                            <div class="hasil-item">
-                                <p>Total Biaya (Co-firing)</p>
-                                <span id="totalBiayaCofiring">Rp 0</span>
-                            </div>
-                                <div class="hasil-item highlight">
-                                <p>Selisih Biaya Tahunan</p>
-                                <span id="totalSelisihBiaya">Rp 0</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="referensi-content" class="re-content-section" style="display:none;">
-                    <div class="referensi-container">
-                        <h1>Referensi dan Database Perhitungan</h1>
-                        <p class="deskripsi">Halaman ini berisi acuan, standar, dan catatan operasional terkait co-firing.</p>
-                        
-                        <div class="referensi-section">
-                            <h3><i class="fas fa-file-alt"></i> Pustaka Dokumen</h3>
-                            <p><strong>Penting:</strong> Letakkan file fisik (PDF, Word, Excel) di dalam folder "dokumen" di proyek Anda agar link berfungsi.</p>
-                            <div class="employee-table-container" style="margin-top:15px;">
-                                <table class="employee-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Nama File</th>
-                                            <th>Deskripsi</th>
-                                            <th>Tanggal</th>
-                                            <th style="text-align:center;">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tabel-dokumen-body"></tbody>
-                                </table>
-                            </div>
-                            <button id="tambah-dokumen-btn" class="btn-primary" style="margin-top:15px;"><i class="fas fa-plus"></i> Tambah Dokumen</button>
-                        </div>
-                    </div>
-                </div>
-
-            `;
-            setupRenewableEnergyTabs();
-        }
-        else if (pageName === 'CSR') {
-            contentBody.innerHTML = `<p>Konten untuk halaman <strong>${pageName}</strong> sedang dalam pengembangan.</p>`;
-        }
-        else {
-            contentBody.innerHTML = `<p>Konten untuk halaman <strong>${pageName}</strong> sedang dalam pengembangan.</p>`;
-        }
-
-        if (addToHistory && !['RENEWABLE ENERGY', 'REFERENSI DAN DATABASE'].includes(pageName)) {
-            history.pushState({ page: pageName }, '', `#${pageName.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-')}`);
-        } else if (addToHistory) {
-            history.pushState({ page: pageName }, '', `#renewable-energy`);
-        }
-    }
-
-    // --- EVENT LISTENERS GLOBAL ---
-    menuLinks.forEach(link => { link.addEventListener('click', (e) => { e.preventDefault(); navigateTo(link.dataset.page); }); });
-    window.addEventListener('popstate', function (event) {
-        if (event.state && event.state.page) {
-            navigateTo(event.state.page, false);
-        }
-    });
-
-    if (navBackBtn) navBackBtn.addEventListener('click', () => history.back());
-    if (navForwardBtn) navForwardBtn.addEventListener('click', () => history.forward());
-
-    closeButtons.forEach(button => button.addEventListener('click', () => closeModal(button.closest('.modal'))));
-    formPhotoInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) { const reader = new FileReader(); reader.onload = (event) => { formPhotoPreview.src = event.target.result; }; reader.readAsDataURL(file); }
-    });
-    
-    contentBody.addEventListener('click', (e) => {
-        const targetButton = e.target.closest('button');
-        if (!targetButton) return;
-
-        const { action, nid, name, index } = targetButton.dataset;
-
-        switch (action) {
-            case 'open-monitoring': openMonitoringDashboard(); break;
-            case 'open-recap': openRecapModal(); break;
-            case 'add-employee': openEmployeeForm(); break;
-            case 'edit-employee': openEmployeeForm(employees.find(e => e.nid === nid)); break;
-            case 'delete-employee':
-                if (confirm(`Yakin ingin menghapus karyawan dengan NID ${nid}?`)) { 
-                    employees = employees.filter(e => e.nid !== nid); 
-                    saveEmployees(); 
-                    navigateTo('HUMAN RESOURCE PERFORMANCE', false); 
-                    showToast("Karyawan berhasil dihapus."); 
-                }
-                break;
-            case 'delete-all':
-                if (confirm("Lanjutkan menghapus semua daftar karyawan?")) {
-                    employees = [];
-                    saveEmployees();
-                    showToast("Semua data karyawan berhasil dihapus.");
-                    const tableWrapper = document.getElementById('employee-table-wrapper');
-                    if (tableWrapper) {
-                        tableWrapper.innerHTML = '';
-                        document.getElementById('btn-show-list').click();
-                        document.getElementById('btn-show-list').click();
-                    }
-                }
-                break;
-            case 'download-barcode': downloadBarcode(nid, name); break;
-            case 'manage-companies': manageCompanies(); break;
-            case 'open-schedule-manager': openShiftScheduleManager(); break;
-            case 'toggle-notepad': toggleNotepad(); break;
-            case 'load-dummy-data':
-                loadDummyData();
-                navigateTo(currentPageName, false);
-                break;
-            
-            case 'add-item':
-                openItemForm();
-                break;
-            case 'import-items':
-                const itemImporter = contentBody.querySelector('#item-excel-importer');
-                if (itemImporter) itemImporter.click();
-                break;
-            case 'delete-all-items':
-                if (confirm('Yakin ingin menghapus SEMUA data master barang? Ini tidak bisa dibatalkan.')) {
-                    inventoryItems = [];
-                    saveInventoryItems();
-                    renderMasterData();
-                    showToast('Semua data barang berhasil dihapus.', true);
-                }
-                break;
-            case 'detail-item':
-                const selectedItem = inventoryItems[index];
-                if (selectedItem) {
-                    showItemDetail(selectedItem);
-                }
-                break;
-            case 'edit-item':
-                openItemForm(inventoryItems[index], index);
-                break;
-            case 'delete-item':
-                if (confirm(`Yakin ingin menghapus barang "${inventoryItems[index].name}"?`)) {
-                    inventoryItems.splice(index, 1);
-                    saveInventoryItems();
-                    renderMasterData();
-                    showToast('Barang berhasil dihapus.', true);
-                }
-                break;
-        }
-    });
-
-    if (generateCodeBtn) {
-        generateCodeBtn.addEventListener('click', () => {
-            const itemCodeInput = document.getElementById('item-code');
-            const itemCategorySelect = document.getElementById('item-category');
-            let prefix = 'IT'; 
-            
-            if (itemCategorySelect.value) {
-                switch (itemCategorySelect.value) {
-                    case 'Sparepart': prefix = 'SP'; break;
-                    case 'Alat': prefix = 'AL'; break;
-                    case 'Consumable': prefix = 'CS'; break;
-                    case 'Bahan Baku': prefix = 'BB'; break;
-                }
-            }
-            
-            itemCodeInput.value = generateUniqueCode(prefix);
-            showToast('Kode barang berhasil dibuat secara otomatis!', true);
-        });
-    }
-
-    if (editProfileBtn) {
-        editProfileBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            openEditProfileModal();
-        });
-    }
-
-    // --- PERBAIKAN: EVENT LISTENER UNTUK JADWAL SHIFT & FORM KARYAWAN ---
-    // Menggunakan event delegation pada modal schedule
-    if (shiftScheduleModal) {
-        shiftScheduleModal.addEventListener('click', (e) => {
-            if (e.target.id === 'save-schedule-btn') {
-                handleSaveSchedule();
-            }
-            if (e.target.id === 'open-shift-times-btn') {
-                openShiftTimesManager();
-            }
-        });
-    }
-
-    if (shiftTimesForm) {
-        shiftTimesForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            handleSaveShiftTimes();
-        });
-    }
-    
-    // Ini adalah listener untuk form karyawan yang seharusnya dipasang di awal.
-    if (employeeForm) {
-        employeeForm.addEventListener('submit', handleEmployeeFormSubmit);
-    }
-    // --- AKHIR PERBAIKAN ---
-
-    if (itemForm) {
-        itemForm.addEventListener('submit', handleItemFormSubmit);
-    }
-    
-
-    if (downloadRecapBtn) downloadRecapBtn.addEventListener('click', downloadRecapExcel);
-    if (clearRecapBtn) clearRecapBtn.addEventListener('click', clearRecapData);
-    if (toggleFullscreenBtn) toggleFullscreenBtn.addEventListener('click', toggleFullscreen);
-
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
-            const icon = refreshBtn.querySelector('i');
-            icon.classList.add('icon-spin');
-            refreshBtn.disabled = true;
-            setTimeout(() => {
-                navigateTo(currentPageName, false);
-                icon.classList.remove('icon-spin');
-                refreshBtn.disabled = false;
-                showToast("Data berhasil diperbarui.");
-            }, 1000);
-        });
-    }
-
-    if (scanButton) scanButton.addEventListener('click', processScan);
-    if (nidScannerInput) nidScannerInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') processScan(); });
-    if (monitoringFooter) monitoringFooter.addEventListener('click', (e) => { const editButton = e.target.closest('.k3-edit-btn'); if (editButton) { const targetId = editButton.dataset.target; const pElement = document.getElementById(targetId); const newValue = prompt(`Masukkan nilai baru untuk "${pElement.previousElementSibling.textContent}":`, pElement.textContent); if (newValue !== null && newValue.trim() !== "") { pElement.textContent = newValue.trim().toUpperCase(); saveK3Stats(); showToast("Statistik K3 berhasil diperbarui."); } } });
-
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            sessionStorage.clear();
-            showToast("Anda telah berhasil logout.");
-            window.location.href = 'login.html';
-        });
-    }
-
-    // INISIALISASI APLIKASI
-    loadData();
-    history.replaceState({ page: 'DASHBOARD' }, '', '#dashboard');
-    navigateTo('DASHBOARD', false);
-    loadUserProfile();
-    setupEditProfileListeners();
-});
+}
+.parameter-grid-bahan-bakar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    align-items: end;
+}
+.pemisah-bahan-bakar {
+    border: none;
+    border-top: 1px dashed #cbd5e1;
+    margin: 15px 0;
+}
+.unit-selector {
+    display: flex;
+    gap: 15px;
+    padding: 8px;
+    margin-bottom: 8px;
+}
+.unit-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.unit-option label {
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #334155;
+}
+.unit-option input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+.submenu-bar {
+    display: flex;
+    gap: 8px;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 20px;
+}
+.submenu-btn {
+    border: none;
+    background: none;
+    padding: 10px 15px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border-bottom: 3px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.submenu-btn:hover {
+    color: #e92b0a;
+}
+.submenu-btn.active {
+    color: #0d2847;
+    border-bottom-color: #0d2847;
+}
+.re-content-section {
+    animation: fadeIn 0.5s;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.notepad-container {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.notepad-container h4 {
+    color: #0d2847;
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.notepad-textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    resize: vertical;
+    margin-bottom: 10px;
+}
+.notepad-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+}
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #11d4ba;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(221, 8, 8, 0.15);
+    font-size: 14px;
+    font-weight: 600;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.5s, bottom 0.5s, visibility 0.5s;
+}
+.toast.show {
+    visibility: visible;
+    opacity: 1;
+    bottom: 30px;
+}
+.blinking-info-container {
+    background-color: #fde047;
+    color: #1e3a8a;
+    padding: 10px;
+    border-radius: 10px;
+    margin-top: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+.blinking-info-container .fas {
+    font-size: 1.8em;
+}
+.blinking-text {
+    font-size: 1.2em;
+    font-weight: bold;
+    animation: blinker 1s linear infinite;
+}
+@keyframes blinker {
+    50% { opacity: 0; }
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.icon-spin {
+    animation: spin 1s linear infinite;
+}
+.btn-secondary {
+    transition: all 0.2s ease;
+}
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+/* ===== TOOLTIP BARU UNTUK KALKULATOR ===== */
+.tooltip-container {
+    position: relative;
+    display: inline-block;
+}
+.tooltip-container .tooltip-text {
+    visibility: hidden;
+    width: 250px;
+    background-color: #0d2847;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -125px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 12px;
+}
+.tooltip-container .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #0d2847 transparent transparent transparent;
+}
+.tooltip-container:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+.fa-info-circle {
+    color: #3b82f6;
+    cursor: help;
+}
+
+/* Penyesuaian jarak pada menu sidebar */
+.sidebar .menu ul li a {
+    margin-bottom: 4px;
+}
+.profile-container {
+    padding: 15px 10px;
+    margin-top: 10px;
+}
+.sidebar .logo {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+}
+
+/* Jarak antar form-section di kalkulator */
+.kalkulator-container .form-section {
+    margin-bottom: 1.2em;
+    padding-top: 0.8em;
+}
+/* Jarak antar item di hasil kalkulasi */
+.hasil-item {
+    padding: 8px 0;
+}
+/* Style untuk menu submenu di Renewable Energy */
+.submenu-btn {
+    padding: 10px 12px;
+    font-size: 13px;
+}
+/* Style untuk modal form secara umum */
+.modal-content.form-modal {
+    margin: 5vh auto;
+}
+/* Styling untuk tombol di Catatan & Log Perubahan */
+.catatan-item {
+    position: relative;
+    padding-right: 120px; /* Memberi ruang untuk tombol */
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: #f9fafc;
+}
+.catatan-teks {
+    font-size: 14px;
+    margin-bottom: 5px;
+    color: #334155;
+}
+.catatan-tanggal {
+    font-size: 12px;
+    color: #64748b;
+    font-style: italic;
+}
+.catatan-actions {
+    position: absolute;
+    top: 15px;
+    right: 10px;
+    display: flex;
+    gap: 5px;
+}
+.btn-edit-note, .btn-delete-note {
+    font-size: 11px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+.btn-edit-note {
+    background-color: #f59e0b;
+    color: white;
+    border: none;
+}
+.btn-delete-note {
+    background-color: #dc2626;
+    color: white;
+    border: none;
+}
+/* Gaya untuk sub-menu Master Data */
+.action-bar-sub {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #eef2f7;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.table-container {
+    overflow-x: auto;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+}
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.data-table th, .data-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+}
+.data-table th {
+    background-color: #f1f5f9;
+    color: #475569;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+.data-table tr:hover td {
+    background-color: #f8fafc;
+}
+.data-table .actions {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.data-table .btn-edit, .data-table .btn-delete {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+/* Modal Form untuk Barang */
+#itemFormModal .modal-content {
+    max-width: 500px;
+}
+#save-item-button {
+    background-color: #22c55e;
+}
+/* Perubahan pada Modal Detail Barang */
+#itemDetailModal .modal-content {
+    background-color: #1a3b5d; /* Warna latar belakang modal yang lebih gelap */
+    color: #ffffff; /* Warna teks utama menjadi putih */
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+}
+
+#item-detail-title {
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #3b82f6; /* Garis bawah biru untuk judul */
+    padding-bottom: 10px;
+}
+
+.detail-section h4 {
+    color: #4ade80; /* Warna hijau cerah untuk sub-judul */
+    font-size: 18px;
+    margin-top: 25px;
+    margin-bottom: 10px;
+}
+
+.detail-section p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #e0e0e0; /* Perbaikan: Mengatur warna teks data menjadi lebih terang */
+}
+
+.detail-section strong {
+    color: #a9c1d9; /* Perbaikan: Mengatur warna label menjadi abu-abu terang */
+    display: inline-block;
+    min-width: 150px; /* Jarak yang konsisten antar label */
+}
+
+/* Gaya untuk tabel di dalam modal detail */
+#itemDetailModal .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+#itemDetailModal .data-table th,
+#itemDetailModal .data-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(238, 235, 235, 0.937); /* Garis pemisah yang lebih halus */
+    font-size: 13px;
+    color: #e0e0e0;
+}
+
+#itemDetailModal .data-table th {
+    background-color: rgba(255, 255, 255, 0.05); /* Latar belakang header tabel */
+    color: #a9c1d9;
+    text-transform: uppercase;
+}
+
+#itemDetailModal .data-table tr:hover td {
+    background-color: rgba(255, 255, 255, 0.03); /* Efek hover ringan */
+}
+
+#item-detail-content .log-table-wrapper > p {
+    color: #a9c1d9 !important;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+/* Gaya untuk tombol close (X) pada modal */
+.modal-content .close-button {
+    color: #ffffff; /* Mengubah warna ikon X menjadi putih terang */
+    opacity: 1; /* Memastikan opacity penuh agar tidak transparan */
+    font-size: 30px; /* Membuat ukuran X sedikit lebih besar */
+    font-weight: bold; /* Membuat X lebih tebal */
+    text-shadow: none;
+    position: absolute; /* Memungkinkan penempatan yang akurat */
+    right: 20px; /* Jarak dari sisi kanan */
+    top: 15px; /* Jarak dari sisi atas */
+    cursor: pointer;
+}
+
+.modal-content .close-button:hover,
+.modal-content .close-button:focus {
+    color: #4ade80; /* Mengubah warna X saat di-hover/fokus */
+    opacity: 0.8;
+}
+.input-with-button {
+    display: flex;
+    gap: 8px;
+}
+.input-with-button input {
+    flex: 1;
+}
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f4f8; /* Warna latar belakang yang lebih lembut */
+    color: #334155; /* Warna teks utama yang gelap dan profesional */
+}
+
+.container {
+    background-color: #ffffff; /* Latar belakang kontainer utama putih bersih */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); /* Tambahkan bayangan lembut */
+    border-radius: 12px;
+}
+
+.sidebar {
+    background: linear-gradient(180deg, #0d2847 0%, #1a3a60 100%); /* Gradasi vertikal yang elegan */
+    color: #e2e8f0;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
+}
+
+.main-content {
+    background-color: #f0f4f8;
+}
+/* Perbaiki tombol agar lebih seragam dan modern */
+.btn-primary, .btn-secondary, .btn-success, .btn-delete {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px; /* Tepi yang lebih membulat */
+    font-weight: 600; /* Teks tebal untuk visibilitas */
+    cursor: pointer;
+    transition: all 0.3s ease; /* Transisi halus saat interaksi */
+    text-transform: uppercase;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background-color: #0d2847;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background-color: #1a3a60;
+}
+
+/* Perbaiki gaya tabel */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden; /* Penting untuk border-radius */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.data-table th, .data-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.data-table th {
+    background-color: #eef2f6;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+}
+
+/* Perbaiki form input */
+.input-group input, .input-group select, .input-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 1em;
+    background-color: #f8fafc;
+    transition: border-color 0.3s ease;
+}
+
+.input-group input:focus, .input-group select:focus, .input-group textarea:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+/* Perbaiki bilah navigasi */
+.sidebar .menu a {
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin: 8px 0;
+    transition: background-color 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sidebar .menu a:hover,
+.sidebar .menu a.active {
+    background-color: rgba(255, 255, 255, 0.1); /* Latar belakang transparan saat hover */
+    color: #fff;
+    font-weight: 600;
+}
+
+/* Perbaiki card di dasbor */
+.kpi-card {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 5px solid #3b82f6; /* Tambahkan aksen warna */
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.kpi-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
