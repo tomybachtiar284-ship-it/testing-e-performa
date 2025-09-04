@@ -3,10 +3,12 @@
 // ===============================================
 document.addEventListener('DOMContentLoaded', function () {
     // --- CEK STATUS LOGIN SAAT APLIKASI DIMULAI ---
-    if (sessionStorage.getItem('statusLogin') !== 'true') {
-        // Jika tidak ada status login, arahkan ke halaman login
+    const statusLogin = sessionStorage.getItem('statusLogin');
+    console.log("Status login di sessionStorage:", statusLogin); // BARIS DEBUGGING
+    
+    if (statusLogin !== 'true') {
         window.location.href = 'login.html';
-        return; // Hentikan eksekusi skrip
+        return;
     }
 
     Chart.register(ChartDataLabels);
@@ -50,6 +52,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const navForwardBtn = document.getElementById('nav-forward-btn');
     const toastNotification = document.getElementById('toast-notification');
     const itemDetailModal = document.getElementById('itemDetailModal');
+    const editProfileBtn = document.getElementById('edit-profile-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const shiftTimesForm = document.getElementById('shift-times-form');
+    const itemForm = document.getElementById('item-form');
 
     // --- STATE APLIKASI ---
     let employees = [];
@@ -185,7 +191,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 3000);
     }
 
-    // --- FUNGSI-FUNGSI APLIKASI ---
+    // ====================================================================
+    // KUMPULAN FUNGSI-FUNGSI UTAMA
+    // ====================================================================
+
     function loadUserProfile() {
         const profileName = sessionStorage.getItem('namaAkun') || 'Pengguna';
         const profilePictureUrl = sessionStorage.getItem('fotoProfil') || `https://placehold.co/40x40/cccccc/333?text=${profileName.charAt(0)}`;
@@ -269,95 +278,111 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function renderEmployeeManagementPage() {
-        contentBody.innerHTML = `
-            <div class="action-bar">
-                <button class="btn-secondary" data-action="open-monitoring"><i class="fas fa-chart-line"></i> Buka Monitoring</button>
-                <button class="btn-success" data-action="open-recap"><i class="fas fa-list"></i> Rekapitulasi</button>
-                <button id="btn-show-list" class="btn-primary" style="background: #0d2847; border-color: #fff;"><i class="fas fa-list-alt"></i> Manajemen Karyawan</button>
-                <button class="btn-primary" data-action="open-schedule-manager"><i class="fas fa-calendar-alt"></i> Atur Jadwal Shift</button>
-                <button class="btn-primary" data-action="toggle-notepad" style="background-color: #f59e0b;"><i class="fas fa-sticky-note"></i> Catatan Informasi</button>
-            </div>
-            <div id="notepad-container" class="notepad-container" style="display: none;">
-                <h4><i class="fas fa-book-open"></i> Catatan & Informasi Penting</h4>
-                <textarea id="notepad-textarea" class="notepad-textarea" placeholder="Tulis catatan atau ringkasan penting di sini..."></textarea>
-                <button id="save-notepad-btn" class="btn-success"><i class="fas fa-save"></i> Simpan Catatan</button>
-            </div>
-            <div id="employee-table-wrapper" style="display: none;"></div>
-        `;
-        const btnShowList = document.getElementById('btn-show-list');
-        if (btnShowList) {
-            btnShowList.addEventListener('click', () => {
-                const tableWrapper = document.getElementById('employee-table-wrapper');
-                if (!tableWrapper) return;
-                if (tableWrapper.style.display === 'none' || tableWrapper.innerHTML === '') {
-                    tableWrapper.style.display = 'block';
-                    const groupedEmployees = employees.reduce((acc, emp) => {
-                        (acc[emp.regu || 'Daytime'] = acc[emp.regu || 'Daytime'] || []).push(emp);
-                        return acc;
-                    }, {});
-                    let contentHTML = `
-                        <div class="action-bar" style="justify-content: flex-start;">
-                            <button class="btn-primary" data-action="add-employee"><i class="fas fa-plus"></i> Tambah Karyawan</button>
-                            <button class="btn-primary" data-action="manage-companies"><i class="fas fa-cog"></i> Kelola PT</button>
-                            <input type="file" id="excel-importer" style="display:none" accept=".xlsx, .xls">
-                            <button class="btn-primary" onclick="document.getElementById('excel-importer').click()"><i class="fas fa-file-import"></i> Impor dari Excel</button>
-                            <button class="btn-success" data-action="download-template"><i class="fas fa-file-download"></i> Download Template</button>
-                            <button class="btn-delete" data-action="delete-all" style="margin-left: auto;"><i class="fas fa-trash-alt"></i> Hapus Semua</button>
-                        </div>`;
-                    if (employees.length > 0) {
-                        ['Daytime', 'A', 'B', 'C', 'D'].forEach(regu => {
-                            if (groupedEmployees[regu] && groupedEmployees[regu].length > 0) {
-                                contentHTML += `
-                                    <div class="regu-group">
-                                        <h3 class="regu-header">Kelompok: ${regu}</h3>
-                                        <div class="employee-table-container">
-                                            <table class="employee-table">
-                                                <thead>
+function renderEmployeeManagementPage() {
+    contentBody.innerHTML = `
+        <div class="action-bar">
+            <button class="btn-secondary" data-action="open-monitoring"><i class="fas fa-chart-line"></i> Buka Monitoring</button>
+            <button class="btn-success" data-action="open-recap"><i class="fas fa-list"></i> Rekapitulasi</button>
+            <button id="btn-show-list" class="btn-primary" style="background: #0d2847; border-color: #fff;"><i class="fas fa-list-alt"></i> Manajemen Karyawan</button>
+            <button class="btn-primary" data-action="open-schedule-manager"><i class="fas fa-calendar-alt"></i> Atur Jadwal Shift</button>
+            <button class="btn-primary" data-action="toggle-notepad" style="background-color: #f59e0b;"><i class="fas fa-sticky-note"></i> Catatan Informasi</button>
+        </div>
+        <div id="notepad-container" class="notepad-container" style="display: none;">
+            <h4><i class="fas fa-book-open"></i> Catatan & Informasi Penting</h4>
+            <textarea id="notepad-textarea" class="notepad-textarea" placeholder="Tulis catatan atau ringkasan penting di sini..."></textarea>
+            <button id="save-notepad-btn" class="btn-success"><i class="fas fa-save"></i> Simpan Catatan</button>
+        </div>
+        <div id="employee-table-wrapper" style="display: none;"></div>
+    `;
+    const btnShowList = document.getElementById('btn-show-list');
+    if (btnShowList) {
+        btnShowList.addEventListener('click', () => {
+            const tableWrapper = document.getElementById('employee-table-wrapper');
+            if (!tableWrapper) return;
+            if (tableWrapper.style.display === 'none' || tableWrapper.innerHTML === '') {
+                tableWrapper.style.display = 'block';
+                const groupedEmployees = employees.reduce((acc, emp) => {
+                    (acc[emp.regu || 'Daytime'] = acc[emp.regu || 'Daytime'] || []).push(emp);
+                    return acc;
+                }, {});
+                let contentHTML = `
+                    <div class="action-bar" style="justify-content: flex-start;">
+                        <button class="btn-primary" data-action="add-employee"><i class="fas fa-plus"></i> Tambah Karyawan</button>
+                        <button class="btn-primary" data-action="manage-companies"><i class="fas fa-cog"></i> Kelola PT</button>
+                        <input type="file" id="excel-importer" style="display:none" accept=".xlsx, .xls">
+                        <button class="btn-primary" data-action="import-from-excel-btn"><i class="fas fa-file-import"></i> Impor dari Excel</button>
+                        <button class="btn-success" data-action="download-template"><i class="fas fa-file-download"></i> Download Template</button>
+                        <button class="btn-delete" data-action="delete-all" style="margin-left: auto;"><i class="fas fa-trash-alt"></i> Hapus Semua</button>
+                    </div>`;
+                if (employees.length > 0) {
+                    ['Daytime', 'A', 'B', 'C', 'D'].forEach(regu => {
+                        if (groupedEmployees[regu] && groupedEmployees[regu].length > 0) {
+                            contentHTML += `
+                                <div class="regu-group">
+                                    <h3 class="regu-header">Kelompok: ${regu}</h3>
+                                    <div class="employee-table-container">
+                                        <table class="employee-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>NID</th>
+                                                    <th>Nama</th>
+                                                    <th>Jobtitle</th>
+                                                    <th>Company</th>
+                                                    <th>Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${groupedEmployees[regu].map(emp => `
                                                     <tr>
-                                                        <th>NID</th>
-                                                        <th>Nama</th>
-                                                        <th>Jobtitle</th>
-                                                        <th>Company</th>
-                                                        <th>Aksi</th>
+                                                        <td>${emp.nid}</td>
+                                                        <td>${emp.name}</td>
+                                                        <td>${emp.position}</td>
+                                                        <td>${emp.company}</td>
+                                                        <td class="actions">
+                                                            <button class="btn-edit" data-action="edit-employee" data-nid="${emp.nid}"><i class="fas fa-edit"></i> Edit</button>
+                                                            <button class="btn-delete-action btn-delete" data-action="delete-employee" data-nid="${emp.nid}"><i class="fas fa-trash"></i> Hapus</button>
+                                                            <button class="btn-barcode" data-action="download-barcode" data-nid="${emp.nid}" data-name="${emp.name}"><i class="fas fa-qrcode"></i> Barcode</button>
+                                                        </td>
                                                     </tr>
-                                                </thead>
-                                                <tbody>
-                                                    ${groupedEmployees[regu].map(emp => `
-                                                        <tr>
-                                                            <td>${emp.nid}</td>
-                                                            <td>${emp.name}</td>
-                                                            <td>${emp.position}</td>
-                                                            <td>${emp.company}</td>
-                                                            <td class="actions">
-                                                                <button class="btn-edit" data-action="edit-employee" data-nid="${emp.nid}"><i class="fas fa-edit"></i> Edit</button>
-                                                                <button class="btn-delete-action btn-delete" data-action="delete-employee" data-nid="${emp.nid}"><i class="fas fa-trash"></i> Hapus</button>
-                                                                <button class="btn-barcode" data-action="download-barcode" data-nid="${emp.nid}" data-name="${emp.name}"><i class="fas fa-qrcode"></i> Barcode</button>
-                                                            </td>
-                                                        </tr>
-                                                    `).join('')}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>`;
-                            }
-                        });
-                    } else {
-                        contentHTML += `<p style="text-align: center; margin-top: 20px; color: #64748b;">Belum ada data karyawan.</p>`;
-                    }
-                    tableWrapper.innerHTML = contentHTML;
-                    const excelImporter = document.getElementById('excel-importer');
-                    if (excelImporter) {
-                        excelImporter.addEventListener('change', handleExcelImport);
-                    }
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>`;
+                        }
+                    });
                 } else {
-                    tableWrapper.style.display = 'none';
+                    contentHTML += `<p style="text-align: center; margin-top: 20px; color: #64748b;">Belum ada data karyawan.</p>`;
                 }
-            });
-        }
+                tableWrapper.innerHTML = contentHTML;
+
+                // --- MEMPERBAIKI PENANGANAN EVENT UNTUK TOMBOL DINAMIS DI SINI ---
+                // Tambahkan event listener untuk tombol Impor dan Download Template
+                const importBtn = tableWrapper.querySelector('[data-action="import-from-excel-btn"]');
+                const downloadTemplateBtn = tableWrapper.querySelector('[data-action="download-template"]');
+                const excelImporterInput = document.getElementById('excel-importer');
+
+                if (importBtn) {
+                    importBtn.addEventListener('click', () => {
+                        excelImporterInput.click();
+                    });
+                    excelImporterInput.addEventListener('change', handleExcelImport);
+                }
+
+                if (downloadTemplateBtn) {
+                    downloadTemplateBtn.addEventListener('click', downloadExcelTemplate);
+                }
+                // --- AKHIR PERBAIKAN ---
+
+            } else {
+                tableWrapper.style.display = 'none';
+            }
+        });
     }
+}
 
     function renderMonitoringLog() { if (monitoringLogBody) { monitoringLogBody.innerHTML = monitoringLog.slice(0).reverse().map(log => `<tr><td>${new Date(log.timestamp).toLocaleTimeString('id-ID', { hour12: false })}</td><td>${log.name}</td><td>${log.nid}</td><td>${log.position}</td><td>${log.company}</td><td data-status="${log.status.toLowerCase()}">${log.status}</td><td class="log-keterangan">${log.keterangan || '-'}</td></tr>`).join(''); } }
+    
     function openEmployeeForm(employeeData = null) {
         employeeForm.reset();
         document.getElementById('employee-index').value = employeeData ? employees.findIndex(e => e.nid === employeeData.nid) : '';
@@ -382,6 +407,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         openModal(employeeFormModal);
     }
+    
     function handleEmployeeFormSubmit(event) {
         event.preventDefault();
         const index = document.getElementById('employee-index').value;
@@ -396,9 +422,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (tableWrapper && tableWrapper.style.display !== 'none') {
             tableWrapper.innerHTML = '';
             document.getElementById('btn-show-list').click();
-            document.getElementById('btn-show-list').click(); // Panggil dua kali untuk refresh
+            document.getElementById('btn-show-list').click();
         }
     }
+    
     function manageCompanies() {
         const companyList = companies.map((c, i) => `${i + 1}. ${c}`).join('\n');
         const action = prompt(`Daftar Perusahaan:\n${companyList}\nKetik 'T' untuk TAMBAH, atau 'H' untuk HAPUS:`);
@@ -406,6 +433,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (action.trim().toUpperCase() === 'T') { const newCompany = prompt("Masukkan nama PT baru:"); if (newCompany && newCompany.trim()) { companies.push(newCompany.trim()); saveCompanies(); showToast(`PT "${newCompany}" berhasil ditambahkan.`); } }
         else if (action.trim().toUpperCase() === 'H') { const index = parseInt(prompt("Masukkan nomor PT yang akan dihapus:")) - 1; if (!isNaN(index) && index >= 0 && index < companies.length) { if (confirm(`Yakin ingin menghapus PT "${companies[index]}"?`)) { companies.splice(index, 1); saveCompanies(); showToast(`PT berhasil dihapus.`); } } else { showToast("Nomor PT tidak valid.", false); } }
     }
+    
     function handleExcelImport(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -424,6 +452,7 @@ document.addEventListener('DOMContentLoaded', function () {
         };
         reader.readAsArrayBuffer(file);
     }
+    
     function downloadExcelTemplate() { const ws = XLSX.utils.json_to_sheet([{ NID: "CONTOH123", NAMA: "NAMA KARYAWAN", JOBTITLE: "POSISI JABATAN", COMPANY: "PT PLN NPS", REGU: "A" }]); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Template Data Karyawan"); XLSX.writeFile(wb, "Template_Impor_Karyawan.xlsx"); }
     function downloadBarcode(nid, name) { try { const qr = qrcode(0, 'L'); qr.addData(nid); qr.make(); const link = document.createElement("a"); link.href = qr.createDataURL(8, 8); link.download = `qrcode-${name.replace(/ /g, '_')}-${nid}.png`; link.click(); } catch (e) { console.error("Error membuat QR Code:", e); } }
     function updateClock() { if (clockElement) clockElement.textContent = new Date().toLocaleString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\./g, ':'); }
@@ -434,7 +463,8 @@ document.addEventListener('DOMContentLoaded', function () {
         monitoringLog.unshift(newLogEntry);
         renderMonitoringLog();
         localStorage.setItem('monitoringLog', JSON.stringify(monitoringLog));
-        if (monitoringLog.length >= 50) { recapLog.unshift(...monitoringLog); saveRecapLog(); monitoringLog = []; localStorage.removeItem('monitoringLog'); }
+        // Versi yang sudah diperbaiki
+        if (monitoringLog.length >= 5) { recapLog.unshift(...monitoringLog); saveRecapLog(); monitoringLog = []; localStorage.removeItem('monitoringLog'); }
     }
     function processScan() {
         if (!nidScannerInput) return;
@@ -463,7 +493,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function openMonitoringDashboard() { openModal(monitoringModal); updateClock(); updateManpowerStats(); if (clockInterval) clearInterval(clockInterval); clockInterval = setInterval(updateClock, 1000); if (nidScannerInput) nidScannerInput.focus(); }
     function renderRecapTable() { if (recapLogBody) { recapLog.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); recapLogBody.innerHTML = recapLog.map(log => `<tr><td>${new Date(log.timestamp).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'medium' })}</td><td>${log.name}</td><td>${log.nid}</td><td>${log.position}</td><td>${log.company}</td><td>${log.status}</td><td class="log-keterangan">${log.keterangan || '-'}</td></tr>`).join(''); } }
     function openRecapModal() { renderRecapTable(); openModal(recapModal); }
-    function downloadRecapExcel() { if (recapLog.length === 0) { showToast("Tidak ada data rekap untuk diunduh.", false); return; } const dataForExcel = recapLog.map(log => ({ Waktu: new Date(log.timestamp).toLocaleString('id-ID'), Nama: log.name, NID: log.nid, Jobtitle: log.position, Company: log.company, Status: log.status, Keterangan: log.keterangan || '-' })); const ws = XLSX.utils.json_to_sheet(dataForExcel); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Rekap Aktivitas"); XLSX.writeFile(wb, `Rekap_Aktivitas_${new Date().toISOString().slice(0, 10)}.xlsx`); }
+    function downloadRecapExcel() { if (recapLog.length === 0) { showToast("Tidak ada data rekap untuk diunduh.", false); return; } const dataForExcel = recapLog.map(log => ({ Waktu: new Date(log.timestamp).toLocaleString('id-ID'), Nama: log.name, NID: log.nid, Jobtitle: log.position, Company: log.company, Status: log.status, Keterangan: log.keterangan || '-' })); const ws = XLSX.utils.sheet_add_json(XLSX.utils.json_to_sheet([]), dataForExcel); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Rekap Aktivitas"); XLSX.writeFile(wb, `Rekap_Aktivitas_${new Date().toISOString().slice(0, 10)}.xlsx`); }
     function clearRecapData() { if ((recapLog.length > 0 || monitoringLog.length > 0) && confirm("Yakin ingin menghapus SEMUA data rekapitulasi DAN log monitoring?")) { recapLog = []; saveRecapLog(); monitoringLog = []; if (monitoringLogBody) monitoringLogBody.innerHTML = ''; localStorage.removeItem('monitoringLog'); employees.forEach(emp => emp.inOutStatus = 'Keluar'); saveEmployees(); navigateTo('HUMAN RESOURCE PERFORMANCE'); showToast("Data rekapitulasi dan log monitoring telah dihapus."); } }
     function toggleFullscreen() { isFullscreen = !isFullscreen; if (monitoringModal) { monitoringModal.classList.toggle('modal-fullscreen', isFullscreen); toggleFullscreenBtn.innerHTML = isFullscreen ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>'; } }
     function openShiftScheduleManager(targetMonth, targetYear) {
@@ -478,8 +508,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         let tableHTML = `<thead><tr><th>Tanggal</th><th>Regu A</th><th>Regu B</th><th>Regu C</th><th>Regu D</th></tr></thead><tbody>`;
         for (let day = 1; day <= daysInMonth; day++) {
-            const dateKey = `${year}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const scheduleForDay = monthlySchedule[todayKey] || {};
+            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const scheduleForDay = monthlySchedule[dateKey] || {};
             tableHTML += `<tr><td class="date-cell">${day}</td>` + ['A', 'B', 'C', 'D'].map(regu => `<td><select class="schedule-select" data-date="${dateKey}" data-regu="${regu}">${['Pagi', 'Sore', 'Malam', 'Libur'].map(shift => `<option value="${shift}" ${(scheduleForDay[regu] || 'Pagi') === shift ? 'selected' : ''}>${shift}</option>`).join('')}</select></td>`).join('') + `</tr>`;
         }
         document.getElementById('schedule-table').innerHTML = tableHTML + `</tbody>`;
@@ -497,6 +527,25 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById(`${name}-end-minute`).value = String(rule.end.minute).padStart(2, '0');
         });
         openModal(shiftTimesModal);
+    }
+    function handleSaveSchedule() {
+        document.querySelectorAll('.schedule-select').forEach(select => {
+            const { date, regu } = select.dataset;
+            if (!monthlySchedule[date]) monthlySchedule[date] = {};
+            monthlySchedule[date][regu] = select.value;
+        });
+        saveSchedule();
+        showToast('Jadwal berhasil disimpan!');
+    }
+    function handleSaveShiftTimes() {
+        ['Pagi', 'Sore', 'Malam', 'Daytime'].forEach(shift => {
+            const name = shift.toLowerCase();
+            shiftRules[shift].start = { hour: parseInt(document.getElementById(`${name}-start-hour`).value), minute: parseInt(document.getElementById(`${name}-start-minute`).value) };
+            shiftRules[shift].end = { hour: parseInt(document.getElementById(`${name}-end-hour`).value), minute: parseInt(document.getElementById(`${name}-end-minute`).value) };
+        });
+        saveShiftRules();
+        showToast('Jam kerja berhasil disimpan!');
+        closeModal(shiftTimesModal);
     }
 
     function updateActiveShiftDisplay() {
@@ -539,7 +588,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     
-    // --- FUNGSI BARU: Memuat dummy data ---
     function loadDummyData() {
         if (employees.length > 5) {
             showToast("Dummy data sudah dimuat.", false);
@@ -581,13 +629,11 @@ document.addEventListener('DOMContentLoaded', function () {
         setupReferensiListeners();
     }
     
-    // --- FUNGSI UNTUK MENGATUR TAB DI MASTER DATA (VERSI PERBAIKAN) ---
     function setupMasterDataTabs() {
         const submenuBtns = contentBody.querySelectorAll('.submenu-bar .submenu-btn');
         const contentSections = contentBody.querySelectorAll('.re-content-section');
         const daftarBarangContent = contentBody.querySelector('#daftar-barang-content');
     
-        // 1. Logika untuk ganti tab (Daftar Barang, Kategori, Lokasi)
         submenuBtns.forEach(btn => {
             btn.addEventListener('click', function() {
                 submenuBtns.forEach(b => b.classList.remove('active'));
@@ -909,6 +955,34 @@ document.addEventListener('DOMContentLoaded', function () {
         openModal(document.getElementById('rincianPerhitunganModal'));
     }
     
+    function renderTabelDokumen() {
+        const tabelDokumenBody = document.getElementById('tabel-dokumen-body');
+        if (!tabelDokumenBody) return;
+        tabelDokumenBody.innerHTML = dokumenTerkait.map((doc, index) => `
+            <tr>
+                <td><a href="dokumen/${doc.namaFile}" target="_blank">${doc.namaFile}</a></td>
+                <td>${doc.deskripsi}</td>
+                <td>${new Date(doc.tanggal).toLocaleDateString('id-ID')}</td>
+                <td class="actions">
+                    <button class="btn-delete" data-index="${index}"><i class="fas fa-trash"></i> Hapus</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    function renderCatatan() {
+        const catatanList = document.getElementById('catatan-list');
+        if (!catatanList) return;
+        catatanList.innerHTML = catatanReferensi.map((cat, index) => `
+            <div class="catatan-item">
+                <div class="catatan-header">
+                    <span>${new Date(cat.timestamp).toLocaleDateString('id-ID')}</span>
+                    <button class="btn-delete btn-sm" data-index="${index}"><i class="fas fa-trash"></i></button>
+                </div>
+                <p>${cat.teks}</p>
+            </div>
+        `).join('');
+    }
+
     function setupReferensiListeners() {
         const tambahDokumenBtn = document.getElementById('tambah-dokumen-btn');
         const simpanCatatanBtn = document.getElementById('simpan-catatan-btn');
@@ -982,7 +1056,6 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // --- FUNGSI BARU UNTUK INVENTORI ---
     
-    // --- Fungsi untuk generate kode otomatis ---
     function generateUniqueCode(prefix) {
         let newCode;
         let counter = 1;
@@ -1069,12 +1142,10 @@ document.addEventListener('DOMContentLoaded', function () {
         openModal(modal);
     }
     
-    // Fungsi baru untuk menampilkan detail item
     function showItemDetail(item) {
         const content = document.getElementById('item-detail-content');
         if (!content) return;
         
-        // Filter riwayat transaksi berdasarkan kode barang
         const itemTransactions = transactionLog.filter(log => log.itemCode === item.code);
 
         let transactionHtml = '';
@@ -1131,6 +1202,84 @@ document.addEventListener('DOMContentLoaded', function () {
         openModal(itemDetailModal);
     }
 
+    function setupInboundFormListeners() {
+        const inboundForm = contentBody.querySelector('#inbound-form');
+        const inboundCodeInput = contentBody.querySelector('#inbound-code');
+        const inboundNameInput = contentBody.querySelector('#inbound-name');
+        const newItemPrompt = contentBody.querySelector('#new-item-prompt');
+        const addNewItemLink = contentBody.querySelector('#add-new-item-link');
+    
+        if (!inboundCodeInput) return;
+    
+        inboundCodeInput.addEventListener('blur', () => {
+            const code = inboundCodeInput.value.trim().toUpperCase();
+            if (!code) {
+                newItemPrompt.style.display = 'none';
+                return;
+            }
+    
+            const existingItem = inventoryItems.find(item => item.code === code);
+    
+            if (existingItem) {
+                inboundNameInput.value = existingItem.name;
+                inboundNameInput.readOnly = true;
+                newItemPrompt.style.display = 'none';
+            } else {
+                inboundNameInput.value = '';
+                inboundNameInput.readOnly = false;
+                newItemPrompt.style.display = 'flex';
+            }
+        });
+    
+        if (addNewItemLink) {
+            addNewItemLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                const codeToCreate = inboundCodeInput.value.trim().toUpperCase();
+                const nameToCreate = inboundNameInput.value.trim();
+                openItemForm();
+                document.getElementById('item-code').value = codeToCreate;
+                document.getElementById('item-name').value = nameToCreate;
+                showToast('Silakan lengkapi detail barang baru.', true);
+            });
+        }
+        
+        if (inboundForm) {
+            inboundForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const code = inboundCodeInput.value.trim().toUpperCase();
+                const quantity = parseInt(document.getElementById('inbound-quantity').value);
+                const notes = document.getElementById('inbound-notes').value;
+    
+                const itemIndex = inventoryItems.findIndex(item => item.code === code);
+    
+                if (itemIndex === -1) {
+                    showToast('Barang ini tidak ada di Master Data. Harap tambahkan terlebih dahulu.', false);
+                    return;
+                }
+                
+                inventoryItems[itemIndex].stock += quantity;
+                
+                const newTransaction = {
+                    itemCode: code,
+                    type: 'Barang Masuk',
+                    quantity: quantity,
+                    notes: notes,
+                    timestamp: new Date().toISOString()
+                };
+                transactionLog.push(newTransaction);
+                
+                saveInventoryItems();
+                saveTransactionLog();
+                
+                showToast(`Berhasil menambahkan ${quantity} stok untuk ${inventoryItems[itemIndex].name}.`, true);
+                
+                inboundForm.reset();
+                inboundNameInput.readOnly = false;
+                inboundCodeInput.focus();
+            });
+        }
+    }
+
     function handleItemFormSubmit(event) {
         event.preventDefault();
         const index = document.getElementById('item-index').value;
@@ -1146,7 +1295,6 @@ document.addEventListener('DOMContentLoaded', function () {
             expiry: document.getElementById('item-expiry').value
         };
         
-        // Pastikan kode barang unik saat menambahkan item baru
         if (index === '' && inventoryItems.some(item => item.code === newItem.code)) {
             showToast(`Error: Kode barang "${newItem.code}" sudah ada. Gunakan kode lain.`, false);
             return;
@@ -1156,7 +1304,6 @@ document.addEventListener('DOMContentLoaded', function () {
             inventoryItems.push(newItem);
             showToast('Barang baru berhasil ditambahkan.');
         } else {
-            // Saat mengedit, cek duplikasi hanya jika kode barang berubah
             const originalItem = inventoryItems[index];
             if (originalItem.code !== newItem.code && inventoryItems.some(item => item.code === newItem.code)) {
                 showToast(`Error: Kode barang "${newItem.code}" sudah ada. Gunakan kode lain.`, false);
@@ -1171,6 +1318,95 @@ document.addEventListener('DOMContentLoaded', function () {
         renderMasterData();
     }
     
+    function renderSubMenu(menuName) {
+        const mainMenu = contentBody.querySelector('#warehouse-main-menu');
+        const dynamicContent = contentBody.querySelector('#warehouse-dynamic-content');
+        const backBtn = contentBody.querySelector('#warehouse-back-btn');
+        let contentHTML = '';
+    
+        if (menuName === 'master-data') {
+            contentHTML = `
+                <div class="submenu-bar">
+                    <button class="submenu-btn active" data-target="daftar-barang-content"><i class="fas fa-boxes"></i> Daftar Barang/Material</button>
+                    <button class="submenu-btn" data-target="kategori-barang-content"><i class="fas fa-tags"></i> Kategori Barang</button>
+                    <button class="submenu-btn" data-target="lokasi-gudang-content"><i class="fas fa-map-marker-alt"></i> Lokasi Gudang/Rak</button>
+                </div>
+                <div id="daftar-barang-content" class="re-content-section">
+                    <div class="action-bar-sub">
+                        <button class="btn-success" data-action="add-item"><i class="fas fa-plus"></i> Tambah Barang</button>
+                        <button class="btn-primary" data-action="import-items"><i class="fas fa-file-import"></i> Impor dari Excel</button>
+                        <input type="file" id="item-excel-importer" style="display:none" accept=".xlsx, .xls">
+                        <button class="btn-delete" data-action="delete-all-items"><i class="fas fa-trash-alt"></i> Hapus Semua Data</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Kode Barang</th><th>Nama Barang</th><th>Kategori</th><th>Satuan</th><th>Stok</th>
+                                    <th>Min. Stok</th><th>Supplier</th><th>Lokasi</th><th>Kadaluarsa</th><th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="master-data-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="kategori-barang-content" class="re-content-section" style="display:none;">
+                    <h3><i class="fas fa-tags"></i> Manajemen Kategori Barang</h3>
+                    <p style="text-align: center; margin-top: 20px; color: #64748b;">Fitur ini sedang dalam pengembangan.</p>
+                </div>
+                <div id="lokasi-gudang-content" class="re-content-section" style="display:none;">
+                    <h3><i class="fas fa-map-marker-alt"></i> Manajemen Lokasi Gudang/Rak</h3>
+                    <p style="text-align: center; margin-top: 20px; color: #64748b;">Fitur ini sedang dalam pengembangan.</p>
+                </div>`;
+        } else if (menuName === 'barang-masuk') {
+            contentHTML = `
+                <div id="warehouse-inbound-content">
+                    <div class="form-section">
+                        <h3><i class="fas fa-box-open"></i> Input Barang Masuk</h3>
+                        <form id="inbound-form">
+                            <div class="input-group">
+                                <label for="inbound-code">Kode Barang</label>
+                                <input type="text" id="inbound-code" placeholder="Scan atau masukkan kode barang..." required>
+                            </div>
+                            <div class="input-group">
+                                <label for="inbound-name">Nama Barang</label>
+                                <input type="text" id="inbound-name" placeholder="Nama akan terisi otomatis jika ada di Master Data" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="inbound-quantity">Jumlah Masuk</label>
+                                <input type="number" id="inbound-quantity" min="1" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="inbound-notes">Catatan (Opsional)</label>
+                                <textarea id="inbound-notes" placeholder="Contoh: Diterima dari Supplier ABC"></textarea>
+                            </div>
+                            <button type="submit" class="btn-success" style="width: 100%; padding: 12px; font-size: 1.1em;">
+                                <i class="fas fa-check"></i> Proses Barang Masuk
+                            </button>
+                        </form>
+                        <div id="new-item-prompt" style="display: none; margin-top: 20px;" class="blinking-info-container">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Barang tidak ditemukan. <a href="#" id="add-new-item-link" class="blinking-text">Klik di sini untuk menambahkannya ke Master Data.</a></p>
+                        </div>
+                    </div>
+                </div>`;
+        } else {
+            contentHTML = `<h3 style="text-align: center; margin-top: 20px;"><i class="fas fa-info-circle"></i> ${menuName.replace(/-/g, ' ').toUpperCase()}</h3><p style="text-align: center; color: #64748b;">Konten untuk modul ini akan segera hadir.</p>`;
+        }
+    
+        dynamicContent.innerHTML = contentHTML;
+        mainMenu.style.display = 'none';
+        dynamicContent.style.display = 'block';
+        backBtn.style.display = 'inline-flex';
+        
+        if (menuName === 'master-data') {
+            renderMasterData();
+            setupMasterDataTabs();
+        } else if (menuName === 'barang-masuk') {
+            setupInboundFormListeners();
+        }
+    }
+
     // --- NAVIGASI UTAMA ---
     function navigateTo(pageName, addToHistory = true) {
         currentPageName = pageName;
@@ -1222,78 +1458,78 @@ document.addEventListener('DOMContentLoaded', function () {
                         const recentActivities = combinedLog.slice(0, 5);
                         const recentActivitiesHTML = recentActivities.length > 0 ? recentActivities.map(log => `<li><div class="detail"><div class="name">${log.name}</div><div class="time">${new Date(log.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div></div><div class="status-wrapper">${log.keterangan && log.keterangan !== '-' ? `<span class="status keterangan-status">${log.keterangan}</span>` : ''}<span class="status ${log.status.toLowerCase()}">${log.status}</span></div></li>`).join('') : '<li>Tidak ada aktivitas terbaru.</li>';
                         content = `
-                        <div class="hr-dashboard-container">
-                            <button id="hr-fullscreen-btn" title="Toggle Fullscreen"><i class="fas fa-expand"></i></button>
-                            <div class="marquee-container"><p>SELAMAT DATANG DI PT PLN NUSANTARA POWER SERVICE UNIT PLTU AMPANA, UTAMAKAN KESELAMATAN DAN KESEHATAN KERJA (K3) DALAM SETIAP AKTIVITAS ANDA.</p></div>
-                            <div class="hr-dashboard-grid">
-                                <div class="kpi-card">
-                                    <div class="icon total-emp"><i class="fas fa-users"></i></div>
-                                    <div class="info">
-                                        <div class="number">${totalEmployees}</div>
-                                        <div class="label">Total Karyawan Terdaftar</div>
-                                    </div>
-                                </div>
-                                <div class="kpi-card" id="active-shift-display">
-                                    <div class="icon active-shift"><i class="fas fa-clock"></i></div>
-                                    <div class="info">
-                                        <div class="number">ISTIRAHAT</div>
-                                        <div class="label">Regu Bertugas Saat Ini</div>
-                                    </div>
-                                </div>
-                                <div class="kpi-card">
-                                    <div class="icon active-today"><i class="fas fa-user-check"></i></div>
-                                    <div class="info">
-                                        <div class="number">${activeToday}</div>
-                                        <div class="label">Jumlah Hadir Hari Ini</div>
-                                    </div>
-                                </div>
-                                <div class="kpi-card">
-                                    <div class="icon attendance-percent"><i class="fas fa-chart-pie"></i></div>
-                                    <div class="info">
-                                        <div class="number">${attendancePercentage}%</div>
-                                        <div class="label">Persentase Kehadiran</div>
-                                    </div>
-                                </div>
-                                <div class="kpi-card">
-                                    <div class="icon safety-score"><i class="fas fa-shield-alt"></i></div>
-                                    <div class="info">
-                                        <div class="number">98.5%</div>
-                                        <div class="label">Skor Keselamatan</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="hr-main-content-grid">
-                                <div class="activity-feed">
-                                    <h3><i class="fas fa-history"></i> Aktivitas Terkini</h3>
-                                    <ul>${recentActivitiesHTML}</ul>
-                                    <div class="bottom-widgets">
-                                        <div class="k3-stats-dashboard">
-                                            <h3><i class="fas fa-hard-hat"></i> Data Statistik K3</h3>
-                                            <div class="k3-grid">
-                                                <div class="k3-card yellow"><span>Jam Kerja Hilang</span><p id="d-k3-jam-hilang">0</p></div>
-                                                <div class="k3-card red"><span>Kecelakaan Berat & Ringan</span><p id="d-k3-kecelakaan">NIHIL</p></div>
-                                                <div class="k3-card blue"><span>Jam Kerja Bulan Lalu</span><p id="d-k3-jam-lalu">0</p></div>
-                                                <div class="k3-card orange"><span>Total Jam Kerja</span><p id="d-k3-jam-total">0</p></div>
-                                            </div>
+                            <div class="hr-dashboard-container">
+                                <button id="hr-fullscreen-btn" title="Toggle Fullscreen"><i class="fas fa-expand"></i></button>
+                                <div class="marquee-container"><p>SELAMAT DATANG DI PT PLN NUSANTARA POWER SERVICE UNIT PLTU AMPANA, UTAMAKAN KESELAMATAN DAN KESEHATAN KERJA (K3) DALAM SETIAP AKTIVITAS ANDA.</p></div>
+                                <div class="hr-dashboard-grid">
+                                    <div class="kpi-card">
+                                        <div class="icon total-emp"><i class="fas fa-users"></i></div>
+                                        <div class="info">
+                                            <div class="number">${totalEmployees}</div>
+                                            <div class="label">Total Karyawan Terdaftar</div>
                                         </div>
-                                        <div class="chart-wrapper">
-                                            <h3><i class="fas fa-chart-pie"></i> Komposisi Karyawan</h3>
-                                            <div class="chart-container">
-                                                <canvas id="employeeCompositionChart"></canvas>
-                                            </div>
+                                    </div>
+                                    <div class="kpi-card" id="active-shift-display">
+                                        <div class="icon active-shift"><i class="fas fa-clock"></i></div>
+                                        <div class="info">
+                                            <div class="number">ISTIRAHAT</div>
+                                            <div class="label">Regu Bertugas Saat Ini</div>
+                                        </div>
+                                    </div>
+                                    <div class="kpi-card">
+                                        <div class="icon active-today"><i class="fas fa-user-check"></i></div>
+                                        <div class="info">
+                                            <div class="number">${activeToday}</div>
+                                            <div class="label">Jumlah Hadir Hari Ini</div>
+                                        </div>
+                                    </div>
+                                    <div class="kpi-card">
+                                        <div class="icon attendance-percent"><i class="fas fa-chart-pie"></i></div>
+                                        <div class="info">
+                                            <div class="number">${attendancePercentage}%</div>
+                                            <div class="label">Persentase Kehadiran</div>
+                                        </div>
+                                    </div>
+                                    <div class="kpi-card">
+                                        <div class="icon safety-score"><i class="fas fa-shield-alt"></i></div>
+                                        <div class="info">
+                                            <div class="number">98.5%</div>
+                                            <div class="label">Skor Keselamatan</div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="video-container">
-                                    <h3><i class="fas fa-video"></i> PLTU AMPANA </h3>
-                                    <div class="video-wrapper"><video src="videos/PLTUAMPANA.mp4" autoplay loop muted playsinline>Browser Anda tidak mendukung tag video.</video></div>
-                                    <div class="blinking-info-container">
-                                        <i class="fas fa-triangle-exclamation"></i>
-                                        <p id="blinking-text" class="blinking-text"></p>
+                                <div class="hr-main-content-grid">
+                                    <div class="activity-feed">
+                                        <h3><i class="fas fa-history"></i> Aktivitas Terkini</h3>
+                                        <ul>${recentActivitiesHTML}</ul>
+                                        <div class="bottom-widgets">
+                                            <div class="k3-stats-dashboard">
+                                                <h3><i class="fas fa-hard-hat"></i> Data Statistik K3</h3>
+                                                <div class="k3-grid">
+                                                    <div class="k3-card yellow"><span>Jam Kerja Hilang</span><p id="d-k3-jam-hilang">0</p></div>
+                                                    <div class="k3-card red"><span>Kecelakaan Berat & Ringan</span><p id="d-k3-kecelakaan">NIHIL</p></div>
+                                                    <div class="k3-card blue"><span>Jam Kerja Bulan Lalu</span><p id="d-k3-jam-lalu">0</p></div>
+                                                    <div class="k3-card orange"><span>Total Jam Kerja</span><p id="d-k3-jam-total">0</p></div>
+                                                </div>
+                                            </div>
+                                            <div class="chart-wrapper">
+                                                <h3><i class="fas fa-chart-pie"></i> Komposisi Karyawan</h3>
+                                                <div class="chart-container">
+                                                    <canvas id="employeeCompositionChart"></canvas>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="video-container">
+                                        <h3><i class="fas fa-video"></i> PLTU AMPANA </h3>
+                                        <div class="video-wrapper"><video src="videos/PLTUAMPANA.mp4" autoplay loop muted playsinline>Browser Anda tidak mendukung tag video.</video></div>
+                                        <div class="blinking-info-container">
+                                            <i class="fas fa-triangle-exclamation"></i>
+                                            <p id="blinking-text" class="blinking-text"></p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>`;
+                            </div>`;
                         break;
                     case 'equipment-management':
                         navigateTo('EQUIPMENT MANAGEMENT');
@@ -1343,9 +1579,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     text: 'Komposisi Karyawan per Perusahaan'
                                 },
                                 datalabels: {
-                                    formatter: (value, context) => {
-                                        return value;
-                                    },
+                                    formatter: (value) => value,
                                     color: '#fff',
                                     font: {
                                         weight: 'bold',
@@ -1500,7 +1734,6 @@ document.addEventListener('DOMContentLoaded', function () {
             dynamicContent.style.display = 'none';
             backBtn.style.display = 'none';
             
-            // Perbaikan: Menggunakan delegasi event pada elemen .options-grid
             const optionsGrid = contentBody.querySelector('.options-grid');
             if (optionsGrid) {
                 optionsGrid.addEventListener('click', (e) => {
@@ -1510,124 +1743,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
             }
-
-            // Perbaikan: Menggunakan delegasi event pada elemen induk .content-body untuk tombol-tombol dinamis
-            contentBody.addEventListener('click', (e) => {
-                const targetBtn = e.target.closest('button');
-                if (!targetBtn || !targetBtn.dataset.action) return;
-
-                const { action } = targetBtn.dataset;
-
-                // Memastikan ini adalah aksi untuk sub-menu warehouse
-                if (['add-item', 'import-items', 'delete-all-items', 'detail-item', 'edit-item', 'delete-item'].includes(action)) {
-                    const index = targetBtn.dataset.index;
-                    switch (action) {
-                        case 'add-item':
-                            openItemForm();
-                            break;
-                        case 'import-items':
-                            const itemImporter = contentBody.querySelector('#item-excel-importer');
-                            if (itemImporter) itemImporter.click();
-                            break;
-                        case 'delete-all-items':
-                            if (confirm('Yakin ingin menghapus SEMUA data master barang? Ini tidak bisa dibatalkan.')) {
-                                inventoryItems = [];
-                                saveInventoryItems();
-                                renderMasterData();
-                                showToast('Semua data barang berhasil dihapus.', true);
-                            }
-                            break;
-                        case 'detail-item':
-                            const selectedItem = inventoryItems[index];
-                            if (selectedItem) {
-                                showItemDetail(selectedItem);
-                            }
-                            break;
-                        case 'edit-item':
-                            openItemForm(inventoryItems[index], index);
-                            break;
-                        case 'delete-item':
-                            if (confirm(`Yakin ingin menghapus barang "${inventoryItems[index].name}"?`)) {
-                                inventoryItems.splice(index, 1);
-                                saveInventoryItems();
-                                renderMasterData();
-                                showToast('Barang berhasil dihapus.', true);
-                            }
-                            break;
-                    }
-                }
-                
-                // Tambahkan aksi lain jika diperlukan
-                if (action === 'warehouse-back-btn') {
-                    mainMenu.style.display = 'block';
-                    dynamicContent.style.display = 'none';
-                    backBtn.style.display = 'none';
-                    dynamicContent.innerHTML = '';
-                }
+            backBtn.addEventListener('click', () => {
+                mainMenu.style.display = 'block';
+                dynamicContent.style.display = 'none';
+                backBtn.style.display = 'none';
             });
-
-            const renderSubMenu = (menuName) => {
-                let contentHTML = '';
-                if (menuName === 'master-data') {
-                    contentHTML = `
-                        <div class="submenu-bar">
-                            <button class="submenu-btn active" data-target="daftar-barang-content"><i class="fas fa-boxes"></i> Daftar Barang/Material</button>
-                            <button class="submenu-btn" data-target="kategori-barang-content"><i class="fas fa-tags"></i> Kategori Barang</button>
-                            <button class="submenu-btn" data-target="lokasi-gudang-content"><i class="fas fa-map-marker-alt"></i> Lokasi Gudang/Rak</button>
-                        </div>
-
-                        <div id="daftar-barang-content" class="re-content-section">
-                            <div class="action-bar-sub">
-                                <button class="btn-success" data-action="add-item"><i class="fas fa-plus"></i> Tambah Barang</button>
-                                <button class="btn-primary" data-action="import-items"><i class="fas fa-file-import"></i> Impor dari Excel</button>
-                                <input type="file" id="item-excel-importer" style="display:none" accept=".xlsx, .xls">
-                                <button class="btn-delete" data-action="delete-all-items"><i class="fas fa-trash-alt"></i> Hapus Semua Data</button>
-                            </div>
-                            <div class="table-container">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Kode Barang</th>
-                                            <th>Nama Barang</th>
-                                            <th>Kategori</th>
-                                            <th>Satuan</th>
-                                            <th>Stok</th>
-                                            <th>Min. Stok</th>
-                                            <th>Supplier</th>
-                                            <th>Lokasi</th>
-                                            <th>Kadaluarsa</th>
-                                            <th>Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="master-data-body"></tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div id="kategori-barang-content" class="re-content-section" style="display:none;">
-                            <h3><i class="fas fa-tags"></i> Manajemen Kategori Barang</h3>
-                            <p style="text-align: center; margin-top: 20px; color: #64748b;">Fitur ini sedang dalam pengembangan.</p>
-                        </div>
-                        
-                        <div id="lokasi-gudang-content" class="re-content-section" style="display:none;">
-                            <h3><i class="fas fa-map-marker-alt"></i> Manajemen Lokasi Gudang/Rak</h3>
-                            <p style="text-align: center; margin-top: 20px; color: #64748b;">Fitur ini sedang dalam pengembangan.</p>
-                        </div>
-                    `;
-                } else {
-                    contentHTML = `<h3 style="text-align: center; margin-top: 20px;"><i class="fas fa-info-circle"></i> ${menuName.replace(/-/g, ' ').toUpperCase()}</h3><p style="text-align: center; color: #64748b;">Konten untuk modul ini akan segera hadir.</p>`;
-                }
-            
-                dynamicContent.innerHTML = contentHTML;
-                mainMenu.style.display = 'none';
-                dynamicContent.style.display = 'block';
-                backBtn.style.display = 'inline-flex';
-                
-                if (menuName === 'master-data') {
-                    renderMasterData();
-                    setupMasterDataTabs();
-                }
-            };
         }
         else if (pageName === 'TOOLS MANAGEMENT') {
             contentBody.innerHTML = `<p>Konten untuk halaman <strong>${pageName}</strong> sedang dalam pengembangan.</p>`;
@@ -1760,7 +1880,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                         </label>
                                         <input type="number" step="0.1" id="ashBiomassa" required>
                                     </div>
-                                        <div class="input-group">
+                                    <div class="input-group">
                                         <label for="sulfurBiomassa">
                                             Sulfur Content (%)
                                             <span class="tooltip-container"><i class="fas fa-info-circle"></i><span class="tooltip-text">Kadar belerang (S) dalam bahan bakar. Untuk menghitung emisi SO2.</span></span>
@@ -1778,7 +1898,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         
                         <button type="button" id="hitung-fluktuatif-btn" class="btn-primary" style="width:100%; font-size: 1.2rem; padding: 15px;"><i class="fas fa-calculator"></i> HITUNG TOTAL DAMPAK TAHUNAN</button>
                         <button type="button" id="lihat-rincian-btn" class="btn-success" style="width:100%; margin-top: 15px; display:none;"><i class="fas fa-table"></i> Lihat Rincian Perhitungan (Blok 1)</button>
-                
+                        
                         <div id="hasilKalkulasi" class="hasil-container" style="display:none; margin-top: 30px;">
                             <h2>Hasil Akumulasi Tahunan</h2>
                             <div class="hasil-item">
@@ -1873,9 +1993,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (file) { const reader = new FileReader(); reader.onload = (event) => { formPhotoPreview.src = event.target.result; }; reader.readAsDataURL(file); }
     });
     
-    // ====================================================================
-    // PERBAIKAN: Menggunakan Event Delegation untuk menangani klik di contentBody
-    // ====================================================================
     contentBody.addEventListener('click', (e) => {
         const targetButton = e.target.closest('button');
         if (!targetButton) return;
@@ -1883,7 +2000,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const { action, nid, name, index } = targetButton.dataset;
 
         switch (action) {
-            // Aksi-aksi untuk modul SDM (Human Resource Performance)
             case 'open-monitoring': openMonitoringDashboard(); break;
             case 'open-recap': openRecapModal(); break;
             case 'add-employee': openEmployeeForm(); break;
@@ -1911,7 +2027,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 break;
             case 'download-barcode': downloadBarcode(nid, name); break;
             case 'manage-companies': manageCompanies(); break;
-            case 'download-template': downloadExcelTemplate(); break;
             case 'open-schedule-manager': openShiftScheduleManager(); break;
             case 'toggle-notepad': toggleNotepad(); break;
             case 'load-dummy-data':
@@ -1919,7 +2034,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 navigateTo(currentPageName, false);
                 break;
             
-            // Aksi-aksi untuk modul Inventaris (Warehouse & Inventory)
             case 'add-item':
                 openItemForm();
                 break;
@@ -1955,14 +2069,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // --- EVENT LISTENER UNTUK GENERATE KODE OTOMATIS
     if (generateCodeBtn) {
         generateCodeBtn.addEventListener('click', () => {
             const itemCodeInput = document.getElementById('item-code');
             const itemCategorySelect = document.getElementById('item-category');
-            let prefix = 'IT'; // Default
+            let prefix = 'IT'; 
             
-            // Menentukan prefix berdasarkan kategori
             if (itemCategorySelect.value) {
                 switch (itemCategorySelect.value) {
                     case 'Sparepart': prefix = 'SP'; break;
@@ -1977,7 +2089,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    const editProfileBtn = document.getElementById('edit-profile-btn');
     if (editProfileBtn) {
         editProfileBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -1985,20 +2096,37 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    const saveScheduleBtn = document.getElementById('save-schedule-btn');
-    if (saveScheduleBtn) { saveScheduleBtn.addEventListener('click', () => { document.querySelectorAll('.schedule-select').forEach(select => { const { date, regu } = select.dataset; if (!monthlySchedule[date]) monthlySchedule[date] = {}; monthlySchedule[date][regu] = select.value; }); saveSchedule(); showToast('Jadwal berhasil disimpan!'); closeModal(shiftScheduleModal); }); }
+    // --- PERBAIKAN: EVENT LISTENER UNTUK JADWAL SHIFT & FORM KARYAWAN ---
+    // Menggunakan event delegation pada modal schedule
+    if (shiftScheduleModal) {
+        shiftScheduleModal.addEventListener('click', (e) => {
+            if (e.target.id === 'save-schedule-btn') {
+                handleSaveSchedule();
+            }
+            if (e.target.id === 'open-shift-times-btn') {
+                openShiftTimesManager();
+            }
+        });
+    }
 
-    const openShiftTimesBtn = document.getElementById('open-shift-times-btn');
-    if (openShiftTimesBtn) { openShiftTimesBtn.addEventListener('click', openShiftTimesManager); }
+    if (shiftTimesForm) {
+        shiftTimesForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleSaveShiftTimes();
+        });
+    }
+    
+    // Ini adalah listener untuk form karyawan yang seharusnya dipasang di awal.
+    if (employeeForm) {
+        employeeForm.addEventListener('submit', handleEmployeeFormSubmit);
+    }
+    // --- AKHIR PERBAIKAN ---
 
-    const shiftTimesForm = document.getElementById('shift-times-form');
-    if (shiftTimesForm) { shiftTimesForm.addEventListener('submit', (e) => { e.preventDefault(); ['Pagi', 'Sore', 'Malam', 'Daytime'].forEach(shift => { const name = shift.toLowerCase(); shiftRules[shift].start = { hour: parseInt(document.getElementById(`${name}-start-hour`).value), minute: parseInt(document.getElementById(`${name}-start-minute`).value) }; shiftRules[shift].end = { hour: parseInt(document.getElementById(`${name}-end-hour`).value), minute: parseInt(document.getElementById(`${name}-end-minute`).value) }; }); saveShiftRules(); showToast('Jam kerja berhasil disimpan!'); closeModal(shiftTimesModal); }); }
-
-    const itemForm = document.getElementById('item-form');
-    if(itemForm){
+    if (itemForm) {
         itemForm.addEventListener('submit', handleItemFormSubmit);
     }
     
+
     if (downloadRecapBtn) downloadRecapBtn.addEventListener('click', downloadRecapExcel);
     if (clearRecapBtn) clearRecapBtn.addEventListener('click', clearRecapData);
     if (toggleFullscreenBtn) toggleFullscreenBtn.addEventListener('click', toggleFullscreen);
@@ -2017,12 +2145,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    if (employeeForm) employeeForm.addEventListener('submit', handleEmployeeFormSubmit);
     if (scanButton) scanButton.addEventListener('click', processScan);
     if (nidScannerInput) nidScannerInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') processScan(); });
     if (monitoringFooter) monitoringFooter.addEventListener('click', (e) => { const editButton = e.target.closest('.k3-edit-btn'); if (editButton) { const targetId = editButton.dataset.target; const pElement = document.getElementById(targetId); const newValue = prompt(`Masukkan nilai baru untuk "${pElement.previousElementSibling.textContent}":`, pElement.textContent); if (newValue !== null && newValue.trim() !== "") { pElement.textContent = newValue.trim().toUpperCase(); saveK3Stats(); showToast("Statistik K3 berhasil diperbarui."); } } });
 
-    const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             sessionStorage.clear();
